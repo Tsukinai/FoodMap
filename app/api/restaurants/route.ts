@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
 import { REGION_BOUNDS } from '@/lib/constants'
 
+function parseEWKBPoint(hex: string): [number, number] | null {
+  try {
+    const buf = Buffer.from(hex, 'hex')
+    const le = buf[0] === 1
+    const wkbType = le ? buf.readUInt32LE(1) : buf.readUInt32BE(1)
+    const hasSRID = (wkbType & 0x20000000) !== 0
+    const offset = hasSRID ? 9 : 5
+    const x = le ? buf.readDoubleLE(offset) : buf.readDoubleBE(offset)
+    const y = le ? buf.readDoubleLE(offset + 8) : buf.readDoubleBE(offset + 8)
+    return [x, y]
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const cuisineTags = searchParams.get('cuisine_tags')?.split(',').filter(Boolean) ?? []
@@ -41,11 +56,11 @@ export async function GET(request: NextRequest) {
   // Filter by tag IDs (post-query since Supabase JS doesn't support junction filtering easily)
   // PostgREST returns geography columns as GeoJSON objects
   let results = (data ?? []).map((r: any) => {
-    const geo = r.location as { coordinates: [number, number] } | null
+    const coords = typeof r.location === 'string' ? parseEWKBPoint(r.location) : null
     return {
       ...r,
-      location_lng: geo?.coordinates?.[0] ?? null,
-      location_lat: geo?.coordinates?.[1] ?? null,
+      location_lng: coords?.[0] ?? null,
+      location_lat: coords?.[1] ?? null,
       location: undefined,
       signature_dishes: r.signature_dishes ?? [],
       tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
