@@ -287,12 +287,22 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
         {/* User section */}
         {user ? (
           <div className="flex items-center gap-2">
-            <div
-              className="flex items-center justify-center rounded-full flex-shrink-0"
-              style={{ width: 32, height: 32, background: 'var(--fm-green)', color: '#fbf8f1', fontSize: '1rem', fontWeight: 600 }}
-            >
-              {user.email?.slice(0, 2).toUpperCase()}
-            </div>
+            {user.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt="avatar"
+                referrerPolicy="no-referrer"
+                className="rounded-full flex-shrink-0"
+                style={{ width: 32, height: 32, objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                className="flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ width: 32, height: 32, background: 'var(--fm-green)', color: '#fbf8f1', fontSize: '1rem', fontWeight: 600 }}
+              >
+                {user.email?.slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <span
               className="flex-1 truncate"
               style={{ fontSize: '1rem', color: 'var(--fm-ink-3)' }}
