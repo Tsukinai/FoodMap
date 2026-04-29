@@ -1,26 +1,160 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif);
+  --font-heading: var(--font-instrument-serif);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* FoodMap design tokens */
+  --color-fm-orange: #d96b2c;
+  --color-fm-orange-dark: #a43d1f;
+  --color-fm-green: #3f5a3d;
+  --color-fm-gold: #c89233;
+  --color-fm-plum: #7a3a4a;
+  --color-fm-ink: #1f1c18;
+  --color-fm-ink-2: #3b3630;
+  --color-fm-ink-3: #6b635a;
+  --color-fm-ink-4: #a39a8d;
+  --color-fm-line: #e6dfd0;
+  --color-fm-line-2: #d8cfbb;
+  --color-fm-cream: #f5f1e8;
+  --color-fm-paper: #fbf8f1;
+  --color-fm-muted: #ece5d2;
+  --color-fm-tag-cuisine: #e7d8c5;
+  --color-fm-tag-dish: #dde6d4;
+  --color-fm-tag-taste: #f0d9c4;
+  --color-fm-tag-scene: #dcd6e6;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* FoodMap warm cream palette */
+  --background: #f5f1e8;
+  --foreground: #1f1c18;
+  --card: #fbf8f1;
+  --card-foreground: #1f1c18;
+  --popover: #fbf8f1;
+  --popover-foreground: #1f1c18;
+  --primary: #1f1c18;
+  --primary-foreground: #fbf8f1;
+  --secondary: #ece5d2;
+  --secondary-foreground: #1f1c18;
+  --muted: #ece5d2;
+  --muted-foreground: #6b635a;
+  --accent: #d96b2c;
+  --accent-foreground: #ffffff;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #e6dfd0;
+  --input: #e6dfd0;
+  --ring: #a39a8d;
+  --chart-1: #d96b2c;
+  --chart-2: #3f5a3d;
+  --chart-3: #c89233;
+  --chart-4: #7a3a4a;
+  --chart-5: #3a6275;
+  --radius: 0.5rem;
+  --sidebar: #fbf8f1;
+  --sidebar-foreground: #1f1c18;
+  --sidebar-primary: #1f1c18;
+  --sidebar-primary-foreground: #fbf8f1;
+  --sidebar-accent: #ece5d2;
+  --sidebar-accent-foreground: #1f1c18;
+  --sidebar-border: #e6dfd0;
+  --sidebar-ring: #a39a8d;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8cfbb;
+    border-radius: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* MapLibre popup reset */
+.maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
 }
+.maplibregl-popup-tip {
+  display: none !important;
+}
+.maplibregl-popup {
+  z-index: 20;
+}
+
+/* FoodMap tag chip styles */
+.fm-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-weight: 500;
+  background: #ece5d2;
+  color: #3b3630;
+}
+.fm-tag-cuisine { background: #e7d8c5; color: #6b432a; }
+.fm-tag-dish    { background: #dde6d4; color: #3f5a3d; }
+.fm-tag-taste   { background: #f0d9c4; color: #a43d1f; }
+.fm-tag-scene   { background: #dcd6e6; color: #4a3d6b; }
