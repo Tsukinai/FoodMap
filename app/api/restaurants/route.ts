@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
     const geo = r.location as { coordinates: [number, number] } | null
     return {
       ...r,
-      location_lng: geo?.coordinates[0] ?? null,
-      location_lat: geo?.coordinates[1] ?? null,
+      location_lng: geo?.coordinates?.[0] ?? null,
+      location_lat: geo?.coordinates?.[1] ?? null,
       location: undefined,
       signature_dishes: r.signature_dishes ?? [],
       tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],

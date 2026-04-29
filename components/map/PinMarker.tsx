@@ -8,14 +8,16 @@ import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
 interface Props {
   restaurant: Restaurant
   isOwner: boolean
+  editMode: boolean
   isSelected: boolean
   onClick: () => void
   onRefresh: () => void
   onEdit: () => void
 }
 
-export default function PinMarker({ restaurant, isOwner, isSelected, onClick, onRefresh, onEdit }: Props) {
+export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit }: Props) {
   const [deleting, setDeleting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const cuisineTags = restaurant.tags.filter((t) => t.type === 'cuisine')
   const dishTags    = restaurant.tags.filter((t) => t.type === 'dish')
@@ -36,7 +38,6 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
     : null
 
   async function handleDelete() {
-    if (!confirm(`删除 "${restaurant.name}"？`)) return
     setDeleting(true)
     await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
     onRefresh()
@@ -239,47 +240,89 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               )}
 
               {/* Divider + actions */}
-              <div style={{ height: 1, background: 'var(--fm-line)', marginBottom: 10 }} />
-              <div style={{ display: 'flex', gap: 7 }}>
-                {isOwner && (
-                  <>
-                    <button
-                      onClick={onEdit}
-                      style={{
-                        fontSize: 12.5,
-                        fontFamily: 'var(--font-geist-sans)',
-                        border: '1.5px solid var(--fm-line-2)',
-                        background: 'transparent',
-                        color: 'var(--fm-ink-2)',
-                        cursor: 'pointer',
-                        borderRadius: 8,
-                        padding: '7px 12px',
-                        fontWeight: 500,
-                        transition: 'border-color 0.12s',
-                      }}
-                    >
-                      编辑
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      style={{
-                        fontSize: 12.5,
-                        fontFamily: 'var(--font-geist-sans)',
-                        border: '1.5px solid var(--fm-line-2)',
-                        background: 'transparent',
-                        color: deleting ? 'var(--fm-ink-4)' : '#a43d1f',
-                        cursor: deleting ? 'default' : 'pointer',
-                        borderRadius: 8,
-                        padding: '7px 12px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {deleting ? '删除中…' : '删除'}
-                    </button>
-                  </>
-                )}
-              </div>
+              {isOwner && editMode && (
+                <>
+                  <div style={{ height: 1, background: 'var(--fm-line)', marginBottom: 10 }} />
+                  {confirmingDelete ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{ fontSize: 12.5, color: '#a43d1f', fontFamily: 'var(--font-geist-sans)', flex: 1 }}>
+                        确认删除？
+                      </span>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        style={{
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-geist-sans)',
+                          border: 'none',
+                          background: '#a43d1f',
+                          color: '#fff',
+                          cursor: deleting ? 'default' : 'pointer',
+                          borderRadius: 8,
+                          padding: '7px 12px',
+                          fontWeight: 500,
+                          opacity: deleting ? 0.6 : 1,
+                        }}
+                      >
+                        {deleting ? '删除中…' : '确认'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDelete(false)}
+                        disabled={deleting}
+                        style={{
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-geist-sans)',
+                          border: '1.5px solid var(--fm-line-2)',
+                          background: 'transparent',
+                          color: 'var(--fm-ink-2)',
+                          cursor: 'pointer',
+                          borderRadius: 8,
+                          padding: '7px 12px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        取消
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 7 }}>
+                      <button
+                        onClick={onEdit}
+                        style={{
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-geist-sans)',
+                          border: '1.5px solid var(--fm-line-2)',
+                          background: 'transparent',
+                          color: 'var(--fm-ink-2)',
+                          cursor: 'pointer',
+                          borderRadius: 8,
+                          padding: '7px 12px',
+                          fontWeight: 500,
+                          transition: 'border-color 0.12s',
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDelete(true)}
+                        style={{
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-geist-sans)',
+                          border: '1.5px solid var(--fm-line-2)',
+                          background: 'transparent',
+                          color: '#a43d1f',
+                          cursor: 'pointer',
+                          borderRadius: 8,
+                          padding: '7px 12px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </Popup>

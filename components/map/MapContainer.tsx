@@ -50,6 +50,7 @@ export default function MapContainer({
   const [addPinCoords, setAddPinCoords] = useState<{ lng: number; lat: number } | null>(null)
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null)
   const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
+  const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
     if (addingPin) {
@@ -78,6 +79,7 @@ export default function MapContainer({
             key={r.id}
             restaurant={r}
             isOwner={isOwner}
+            editMode={editMode}
             isSelected={selectedRestaurant?.id === r.id}
             onClick={() => setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)}
             onRefresh={onRestaurantSaved}
@@ -96,6 +98,19 @@ export default function MapContainer({
           className="absolute top-3 right-3 flex items-center gap-2"
           style={{ zIndex: 10 }}
         >
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-medium rounded-xl px-4 py-2 shadow-md transition-colors"
+            style={{
+              fontFamily: 'var(--font-geist-sans)',
+              background: editMode ? 'var(--fm-ink)' : 'var(--fm-paper)',
+              color: editMode ? 'var(--fm-paper)' : 'var(--fm-ink-2)',
+              border: `1.5px solid ${editMode ? 'var(--fm-ink)' : 'var(--fm-line-2)'}`,
+              boxShadow: editMode ? '0 4px 10px rgba(31,28,24,0.25)' : '0 2px 6px rgba(0,0,0,0.08)',
+            }}
+          >
+            {editMode ? '退出编辑' : '编辑模式'}
+          </button>
           <button
             onClick={() => onAddingPinChange(true)}
             className="flex items-center gap-1.5 text-sm font-medium rounded-xl px-4 py-2 shadow-md transition-colors"
