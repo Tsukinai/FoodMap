@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import type { Tag } from '@/lib/types'
 import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS } from '@/lib/constants'
 import TagInput from '@/components/tags/TagInput'
+import { Slider } from '@/components/ui/slider'
 
 interface Props {
   lng: number
@@ -12,19 +13,13 @@ interface Props {
   onSaved: () => void
 }
 
-const COST_BRACKETS = [
-  { label: '< 15', min: null, max: 15 },
-  { label: '15–30', min: 15, max: 30 },
-  { label: '30–60', min: 30, max: 60 },
-  { label: '60–120', min: 60, max: 120 },
-  { label: '120+', min: 120, max: null },
-]
+const MAX_COST = 200
 
 export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [postalCode, setPostalCode] = useState('')
-  const [costBracket, setCostBracket] = useState<number | null>(null)
+  const [costRange, setCostRange] = useState<[number, number]>([0, MAX_COST])
   const [notes, setNotes] = useState('')
   const [cuisineTagIds, setCuisineTagIds] = useState<string[]>([])
   const [dishTagIds, setDishTagIds] = useState<string[]>([])
@@ -73,7 +68,6 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
   async function handleSave() {
     if (!name.trim()) return
     setSaving(true)
-    const bracket = costBracket !== null ? COST_BRACKETS[costBracket] : null
     try {
       await fetch('/api/restaurants', {
         method: 'POST',
@@ -84,8 +78,8 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           postal_code: postalCode || null,
           lng: pinLng,
           lat: pinLat,
-          cost_min: bracket?.min ?? null,
-          cost_max: bracket?.max ?? null,
+          cost_min: costRange[0] === 0 ? null : costRange[0],
+          cost_max: costRange[1] === MAX_COST ? null : costRange[1],
           notes: notes || null,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
@@ -219,26 +213,48 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           {/* Cost + Taste row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
             <FormSection label="人均消费 (S$)" noMargin>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {COST_BRACKETS.map((b, i) => {
-                  const active = costBracket === i
-                  return (
-                    <button
-                      key={b.label}
-                      onClick={() => setCostBracket(active ? null : i)}
-                      className="text-base px-3 py-1.5 rounded-full border transition-all"
-                      style={{
-                        fontFamily: 'var(--font-geist-mono)',
-                        fontSize: '1rem',
-                        background: active ? 'var(--fm-ink)' : 'var(--fm-paper)',
-                        color: active ? '#fbf8f1' : 'var(--fm-ink-2)',
-                        borderColor: active ? 'var(--fm-ink)' : 'var(--fm-line-2)',
-                      }}
-                    >
-                      {b.label}
-                    </button>
-                  )
-                })}
+              <div style={{ paddingLeft: 4, paddingRight: 4, paddingTop: 4, paddingBottom: 8 }}>
+                <Slider
+                  value={costRange}
+                  min={0}
+                  max={MAX_COST}
+                  step={5}
+                  onValueChange={(v) => setCostRange(v as [number, number])}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+                <input
+                  type="number"
+                  value={costRange[0] === 0 ? '' : costRange[0]}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(Number(e.target.value) || 0, costRange[1]))
+                    setCostRange([v, costRange[1]])
+                  }}
+                  placeholder="最少"
+                  min={0}
+                  max={costRange[1]}
+                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: '1rem', fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+                />
+                <span style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>–</span>
+                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+                <input
+                  type="number"
+                  value={costRange[1] === MAX_COST ? '' : costRange[1]}
+                  onChange={(e) => {
+                    const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
+                    const v = Math.max(costRange[0], Math.min(raw, MAX_COST))
+                    setCostRange([costRange[0], v])
+                  }}
+                  placeholder="不限"
+                  min={costRange[0]}
+                  max={MAX_COST}
+                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: '1rem', fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+                />
               </div>
             </FormSection>
 

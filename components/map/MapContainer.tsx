@@ -7,6 +7,7 @@ import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/consta
 import type { Restaurant, FilterPayload } from '@/lib/types'
 import PinMarker from './PinMarker'
 import AddPinModal from './AddPinModal'
+import EditPinModal from './EditPinModal'
 
 const ONEMAP_STYLE = {
   version: 8 as const,
@@ -27,22 +28,24 @@ interface Props {
   restaurants: Restaurant[]
   isOwner: boolean
   filters: FilterPayload
+  addingPin: boolean
+  onAddingPinChange: (v: boolean) => void
   onRestaurantSaved: () => void
 }
 
-export default function MapContainer({ restaurants, isOwner, filters, onRestaurantSaved }: Props) {
+export default function MapContainer({ restaurants, isOwner, filters, addingPin, onAddingPinChange, onRestaurantSaved }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [addPinCoords, setAddPinCoords] = useState<{ lng: number; lat: number } | null>(null)
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null)
-  const [addingPin, setAddingPin] = useState(false)
+  const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
 
   const handleMapClick = useCallback(
     (e: maplibregl.MapMouseEvent) => {
       if (!isOwner || !addingPin) return
       setAddPinCoords({ lng: e.lngLat.lng, lat: e.lngLat.lat })
-      setAddingPin(false)
+      onAddingPinChange(false)
     },
-    [isOwner, addingPin]
+    [isOwner, addingPin, onAddingPinChange]
   )
 
   return (
@@ -69,6 +72,7 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
             isSelected={selectedRestaurant?.id === r.id}
             onClick={() => setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)}
             onRefresh={onRestaurantSaved}
+            onEdit={() => { setSelectedRestaurant(null); setEditRestaurant(r) }}
           />
         ))}
 
@@ -90,7 +94,7 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
         {/* Add pin button (owner only) */}
         {isOwner && (
           <button
-            onClick={() => setAddingPin((v) => !v)}
+            onClick={() => onAddingPinChange(!addingPin)}
             className="pointer-events-auto flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-2 shadow-md transition-colors"
             style={{
               fontFamily: 'var(--font-geist-sans)',
@@ -143,6 +147,17 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
           onClose={() => setAddPinCoords(null)}
           onSaved={() => {
             setAddPinCoords(null)
+            onRestaurantSaved()
+          }}
+        />
+      )}
+
+      {editRestaurant && (
+        <EditPinModal
+          restaurant={editRestaurant}
+          onClose={() => setEditRestaurant(null)}
+          onSaved={() => {
+            setEditRestaurant(null)
             onRestaurantSaved()
           }}
         />

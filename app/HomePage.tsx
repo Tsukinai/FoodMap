@@ -37,6 +37,7 @@ export default function HomePage() {
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
+  const [addingPin, setAddingPin] = useState(false)
 
   const supabase = createClient()
 
@@ -100,6 +101,7 @@ export default function HomePage() {
         restaurantCount={allRestaurants.length}
         user={user}
         isOwner={isOwner}
+        onAddPin={() => setAddingPin(true)}
       />
 
       {/* Map area */}
@@ -118,6 +120,8 @@ export default function HomePage() {
               restaurants={allRestaurants}
               isOwner={isOwner}
               filters={filters}
+              addingPin={addingPin}
+              onAddingPinChange={setAddingPin}
               onRestaurantSaved={() => {
                 fetchRestaurants()
                 fetchTags()

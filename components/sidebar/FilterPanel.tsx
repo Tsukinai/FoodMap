@@ -6,6 +6,7 @@ import { REGIONS, PRESET_TASTE_TAGS } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import SmartSearchBar from './SmartSearchBar'
 import { createClient } from '@/lib/supabase/client'
+import { Slider } from '@/components/ui/slider'
 
 interface Props {
   allTags: Tag[]
@@ -17,16 +18,10 @@ interface Props {
   isOwner: boolean
 }
 
-const COST_BRACKETS = [
-  { label: '< $15', min: null, max: 15 },
-  { label: '$15–30', min: 15, max: 30 },
-  { label: '$30–60', min: 30, max: 60 },
-  { label: '$60–120', min: 60, max: 120 },
-  { label: '$120+', min: 120, max: null },
-]
+const MAX_COST = 200
 
 export default function FilterPanel({ allTags, filters, onChange, restaurantCount, user, onAddPin, isOwner }: Props) {
-  const [costBracket, setCostBracket] = useState<number | null>(null)
+  const [costRange, setCostRange] = useState<[number, number]>([0, MAX_COST])
   const supabase = createClient()
 
   async function signIn() {
@@ -43,7 +38,9 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
 
   const cuisineTags = allTags.filter((t) => t.type === 'cuisine')
   const tasteTags = allTags.filter((t) => t.type === 'taste')
-  const displayTasteTags = tasteTags.length > 0 ? tasteTags : PRESET_TASTE_TAGS.map((name, i) => ({ id: `preset-${i}`, name, type: 'taste' as const, created_at: '' }))
+  const displayTasteTags = tasteTags.length > 0
+    ? tasteTags
+    : PRESET_TASTE_TAGS.map((name, i) => ({ id: `preset-${i}`, name, type: 'taste' as const, created_at: '' }))
 
   function toggleTag(key: keyof FilterPayload, name: string) {
     const arr = (filters[key] as string[]) ?? []
@@ -57,19 +54,28 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
     onChange({ ...filters, regions: next })
   }
 
-  function selectCostBracket(idx: number) {
-    if (costBracket === idx) {
-      setCostBracket(null)
-      onChange({ ...filters, min_cost: null, max_cost: null })
-    } else {
-      const b = COST_BRACKETS[idx]
-      setCostBracket(idx)
-      onChange({ ...filters, min_cost: b.min, max_cost: b.max })
-    }
+  function applyRange(range: [number, number]) {
+    setCostRange(range)
+    onChange({
+      ...filters,
+      min_cost: range[0] === 0 ? null : range[0],
+      max_cost: range[1] === MAX_COST ? null : range[1],
+    })
+  }
+
+  function handleMinInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = Math.max(0, Math.min(Number(e.target.value) || 0, costRange[1]))
+    applyRange([v, costRange[1]])
+  }
+
+  function handleMaxInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
+    const v = Math.max(costRange[0], Math.min(raw, MAX_COST))
+    applyRange([costRange[0], v])
   }
 
   function clearAll() {
-    setCostBracket(null)
+    setCostRange([0, MAX_COST])
     onChange({ cuisine_tags: [], dish_tags: [], taste_tags: [], scene_tags: [], max_cost: null, min_cost: null, area_keyword: null, regions: [] })
   }
 
@@ -82,6 +88,19 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
     filters.area_keyword !== null ||
     filters.regions.length > 0
 
+  const costInputStyle: React.CSSProperties = {
+    width: 56,
+    background: 'var(--fm-paper)',
+    border: '1px solid var(--fm-line-2)',
+    borderRadius: 6,
+    padding: '4px 6px',
+    fontSize: '1rem',
+    fontFamily: 'var(--font-geist-mono)',
+    color: 'var(--fm-ink)',
+    outline: 'none',
+    textAlign: 'center',
+  }
+
   return (
     <aside
       className="h-full flex flex-col border-r overflow-hidden"
@@ -93,10 +112,29 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
       }}
     >
       {/* Header */}
-      <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--fm-line)' }}>
+      <div className="px-5 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--fm-line)' }}>
         <div style={{ fontFamily: 'var(--font-instrument-serif)', fontSize: 26, letterSpacing: '-0.01em', lineHeight: 1 }}>
           FoodMap<span style={{ color: 'var(--fm-orange)' }}>.</span>
         </div>
+        {isOwner && onAddPin && (
+          <button
+            onClick={onAddPin}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              background: 'var(--fm-orange)',
+              color: '#fff',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-geist-sans)',
+              flexShrink: 0,
+            }}
+          >
+            ＋ 打地图钉
+          </button>
+        )}
       </div>
 
       {/* Smart search */}
@@ -166,28 +204,44 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
           </section>
         )}
 
-        {/* Cost bracket */}
+        {/* Cost slider + inputs */}
         <section>
           <SectionLabel>人均消费</SectionLabel>
-          <div className="flex flex-wrap gap-1.5">
-            {COST_BRACKETS.map((b, i) => {
-              const active = costBracket === i
-              return (
-                <button
-                  key={b.label}
-                  onClick={() => selectCostBracket(i)}
-                  className="text-sm px-3 py-1.5 rounded-full border transition-all"
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    background: active ? 'var(--fm-ink)' : 'var(--fm-paper)',
-                    color: active ? '#fbf8f1' : 'var(--fm-ink-2)',
-                    borderColor: active ? 'var(--fm-ink)' : 'var(--fm-line-2)',
-                  }}
-                >
-                  {b.label}
-                </button>
-              )
-            })}
+          <div className="px-1 pt-1 pb-3">
+            <Slider
+              value={costRange}
+              min={0}
+              max={MAX_COST}
+              step={5}
+              onValueChange={(v) => applyRange(v as [number, number])}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+            <input
+              type="number"
+              value={costRange[0] === 0 ? '' : costRange[0]}
+              onChange={handleMinInput}
+              placeholder="0"
+              min={0}
+              max={costRange[1]}
+              style={costInputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+            />
+            <span style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>–</span>
+            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+            <input
+              type="number"
+              value={costRange[1] === MAX_COST ? '' : costRange[1]}
+              onChange={handleMaxInput}
+              placeholder="不限"
+              min={costRange[0]}
+              max={MAX_COST}
+              style={costInputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+            />
           </div>
         </section>
 

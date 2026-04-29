@@ -20,5 +20,5 @@ export const REGION_BOUNDS: Record<string, [number, number, number, number]> = {
 
 export const REGIONS = Object.keys(REGION_BOUNDS)
 
-export const PRESET_TASTE_TAGS = ['辣', '清淡', '甜', '咸鲜', '酸', '鲜香', '浓郁', '爽口', '烟熏']
-export const PRESET_SCENE_TAGS = ['约会', '家庭', '快速午餐', '聚餐', '一人食', '深夜', '特殊场合', '平价']
+export const PRESET_TASTE_TAGS = ['不辣', '微辣', '特辣']
+export const PRESET_SCENE_TAGS = ['早餐', 'brunch', '正餐', '夜宵']

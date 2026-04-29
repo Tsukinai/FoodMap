@@ -10,9 +10,10 @@ interface Props {
   isSelected: boolean
   onClick: () => void
   onRefresh: () => void
+  onEdit: () => void
 }
 
-export default function PinMarker({ restaurant, isOwner, isSelected, onClick, onRefresh }: Props) {
+export default function PinMarker({ restaurant, isOwner, isSelected, onClick, onRefresh, onEdit }: Props) {
   const [deleting, setDeleting] = useState(false)
 
   const cuisineTags = restaurant.tags.filter((t) => t.type === 'cuisine')
@@ -197,22 +198,39 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               {/* Actions */}
               <div style={{ display: 'flex', gap: 8 }}>
                 {isOwner && (
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    style={{
-                      fontSize: '1rem',
-                      fontFamily: 'var(--font-geist-sans)',
-                      border: '1px solid var(--fm-line-2)',
-                      background: 'transparent',
-                      color: deleting ? 'var(--fm-ink-4)' : '#a43d1f',
-                      cursor: deleting ? 'default' : 'pointer',
-                      borderRadius: 6,
-                      padding: '7px 12px',
-                    }}
-                  >
-                    {deleting ? '删除中…' : '删除'}
-                  </button>
+                  <>
+                    <button
+                      onClick={onEdit}
+                      style={{
+                        fontSize: '1rem',
+                        fontFamily: 'var(--font-geist-sans)',
+                        border: '1px solid var(--fm-line-2)',
+                        background: 'transparent',
+                        color: 'var(--fm-ink-2)',
+                        cursor: 'pointer',
+                        borderRadius: 6,
+                        padding: '7px 12px',
+                      }}
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      style={{
+                        fontSize: '1rem',
+                        fontFamily: 'var(--font-geist-sans)',
+                        border: '1px solid var(--fm-line-2)',
+                        background: 'transparent',
+                        color: deleting ? 'var(--fm-ink-4)' : '#a43d1f',
+                        cursor: deleting ? 'default' : 'pointer',
+                        borderRadius: 6,
+                        padding: '7px 12px',
+                      }}
+                    >
+                      {deleting ? '删除中…' : '删除'}
+                    </button>
+                  </>
                 )}
               </div>
             </div>

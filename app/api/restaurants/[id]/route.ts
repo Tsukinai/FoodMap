@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params
   const body = await request.json()
-  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, cuisine_tag_ids, dish_tag_ids } = body
+  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
 
   const supabase = await createClient()
 
@@ -24,9 +24,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Replace tags if provided
-  if (cuisine_tag_ids !== undefined || dish_tag_ids !== undefined) {
+  if (cuisine_tag_ids !== undefined || dish_tag_ids !== undefined || taste_tag_ids !== undefined || scene_tag_ids !== undefined) {
     await supabase.from('restaurant_tags').delete().eq('restaurant_id', id)
-    const tagIds = [...(cuisine_tag_ids ?? []), ...(dish_tag_ids ?? [])]
+    const tagIds = [
+      ...(cuisine_tag_ids ?? []),
+      ...(dish_tag_ids ?? []),
+      ...(taste_tag_ids ?? []),
+      ...(scene_tag_ids ?? []),
+    ]
     if (tagIds.length > 0) {
       await supabase.from('restaurant_tags').insert(
         tagIds.map((tag_id: string) => ({ restaurant_id: id, tag_id }))
