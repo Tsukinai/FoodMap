@@ -14,12 +14,10 @@ const ONEMAP_STYLE = {
     onemap: {
       type: 'raster' as const,
       tiles: [
-        'https://maps-a.onemap.sg/v3/Default/{z}/{x}/{y}.png',
-        'https://maps-b.onemap.sg/v3/Default/{z}/{x}/{y}.png',
-        'https://maps-c.onemap.sg/v3/Default/{z}/{x}/{y}.png',
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       ],
       tileSize: 256,
-      attribution: 'Map data © OneMap | Singapore Land Authority',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
   },
   layers: [{ id: 'onemap-layer', type: 'raster' as const, source: 'onemap' }],

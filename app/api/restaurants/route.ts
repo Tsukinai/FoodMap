@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
     .from('restaurants')
     .select(`
       id, name, address, postal_code,
-      ST_X(location::geometry) as location_lng,
-      ST_Y(location::geometry) as location_lat,
+      location,
       cost_min, cost_max, notes, created_at, updated_at,
       restaurant_tags (
         tags ( id, name, type )
@@ -36,11 +35,18 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Filter by tag IDs (post-query since Supabase JS doesn't support junction filtering easily)
-  let results = (data ?? []).map((r: any) => ({
-    ...r,
-    tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
-    restaurant_tags: undefined,
-  }))
+  // PostgREST returns geography columns as GeoJSON objects
+  let results = (data ?? []).map((r: any) => {
+    const geo = r.location as { coordinates: [number, number] } | null
+    return {
+      ...r,
+      location_lng: geo?.coordinates[0] ?? null,
+      location_lat: geo?.coordinates[1] ?? null,
+      location: undefined,
+      tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
+      restaurant_tags: undefined,
+    }
+  })
 
   if (cuisineTags.length > 0) {
     results = results.filter((r: any) =>
