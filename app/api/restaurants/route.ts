@@ -49,10 +49,6 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // #region agent log
-  await fetch('http://127.0.0.1:7785/ingest/06f7814b-35b6-4caa-a074-dc046863fac3', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'bed6da' }, body: JSON.stringify({ sessionId: 'bed6da', runId: 'initial', hypothesisId: 'H1,H2,H5', location: 'app/api/restaurants/route.ts:38', message: 'restaurants GET raw location shapes', data: { rowCount: data?.length ?? 0, samples: (data ?? []).slice(0, 10).map((r: any) => ({ id: r.id, locationType: typeof r.location, isArray: Array.isArray(r.location), rawLocation: r.location, hasCoordinates: Array.isArray(r.location?.coordinates), coordinates: r.location?.coordinates ?? null, coordinateCount: Array.isArray(r.location?.coordinates) ? r.location.coordinates.length : null })) }, timestamp: Date.now() }) }).catch(() => {})
-  // #endregion
-
   // Filter by tag IDs (post-query since Supabase JS doesn't support junction filtering easily)
   // PostgREST returns geography columns as GeoJSON objects
   let results = (data ?? []).map((r: any) => {
@@ -122,10 +118,6 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
-
-  // #region agent log
-  fetch('http://127.0.0.1:7785/ingest/06f7814b-35b6-4caa-a074-dc046863fac3', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'bed6da' }, body: JSON.stringify({ sessionId: 'bed6da', runId: 'initial', hypothesisId: 'H3,H4', location: 'app/api/restaurants/route.ts:107', message: 'restaurants POST coordinate payload', data: { hasName: Boolean(name), hasAddress: Boolean(address), hasPostalCode: Boolean(postal_code), lng, lat, lngType: typeof lng, latType: typeof lat, lngIsFinite: Number.isFinite(lng), latIsFinite: Number.isFinite(lat), pointText: `POINT(${lng} ${lat})` }, timestamp: Date.now() }) }).catch(() => {})
-  // #endregion
 
   if (!name || typeof lng !== 'number' || typeof lat !== 'number') {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
