@@ -27,7 +27,7 @@ export default function AuthButton({ user }: Props) {
       <div className="flex items-center gap-2">
         <button
           onClick={signOut}
-          className="text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+          className="text-base px-3 py-2 rounded-lg transition-colors"
           style={{
             fontFamily: 'var(--font-geist-mono)',
             background: 'var(--fm-paper)',
@@ -45,7 +45,7 @@ export default function AuthButton({ user }: Props) {
   return (
     <button
       onClick={signIn}
-      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+      className="text-base px-4 py-2 rounded-lg font-medium transition-colors"
       style={{
         fontFamily: 'var(--font-geist-sans)',
         background: 'var(--fm-paper)',

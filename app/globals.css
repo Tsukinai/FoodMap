@@ -145,16 +145,23 @@
 .fm-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 1rem;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 500;
   background: #ece5d2;
   color: #3b3630;
+  border: 1.5px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 .fm-tag-cuisine { background: #e7d8c5; color: #6b432a; }
+.fm-tag-cuisine.fm-tag-active { background: #c9a070; color: #3d1a04; border-color: #a43d1f; }
 .fm-tag-dish    { background: #dde6d4; color: #3f5a3d; }
+.fm-tag-dish.fm-tag-active    { background: #a8c89c; color: #1e3a1a; border-color: #3f5a3d; }
 .fm-tag-taste   { background: #f0d9c4; color: #a43d1f; }
+.fm-tag-taste.fm-tag-active   { background: #e2a878; color: #5a1a08; border-color: #a43d1f; }
 .fm-tag-scene   { background: #dcd6e6; color: #4a3d6b; }
+.fm-tag-scene.fm-tag-active   { background: #b8a8d8; color: #251840; border-color: #4a3d6b; }

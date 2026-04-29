@@ -5,6 +5,7 @@ import type { Tag, FilterPayload } from '@/lib/types'
 import { REGIONS, PRESET_TASTE_TAGS } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import SmartSearchBar from './SmartSearchBar'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   allTags: Tag[]
@@ -26,6 +27,19 @@ const COST_BRACKETS = [
 
 export default function FilterPanel({ allTags, filters, onChange, restaurantCount, user, onAddPin, isOwner }: Props) {
   const [costBracket, setCostBracket] = useState<number | null>(null)
+  const supabase = createClient()
+
+  async function signIn() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${location.origin}/auth/callback` },
+    })
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    location.reload()
+  }
 
   const cuisineTags = allTags.filter((t) => t.type === 'cuisine')
   const tasteTags = allTags.filter((t) => t.type === 'taste')
@@ -68,31 +82,21 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
     filters.area_keyword !== null ||
     filters.regions.length > 0
 
-  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : null
-
   return (
     <aside
       className="h-full flex flex-col border-r overflow-hidden"
       style={{
-        width: 280,
+        width: 300,
         background: 'var(--fm-paper)',
         borderColor: 'var(--fm-line)',
         color: 'var(--fm-ink)',
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--fm-line)' }}>
+      <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--fm-line)' }}>
         <div style={{ fontFamily: 'var(--font-instrument-serif)', fontSize: 26, letterSpacing: '-0.01em', lineHeight: 1 }}>
           FoodMap<span style={{ color: 'var(--fm-orange)' }}>.</span>
         </div>
-        {initials ? (
-          <div
-            className="flex items-center justify-center text-xs font-semibold rounded-full flex-shrink-0"
-            style={{ width: 30, height: 30, background: 'var(--fm-green)', color: '#fbf8f1', fontFamily: 'var(--font-geist-mono)' }}
-          >
-            {initials}
-          </div>
-        ) : null}
       </div>
 
       {/* Smart search */}
@@ -116,7 +120,7 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                 <button
                   key={region}
                   onClick={() => toggleRegion(region)}
-                  className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md text-left transition-colors"
+                  className="flex items-center gap-2 text-sm px-2 py-2 rounded-md text-left transition-colors"
                   style={{
                     background: active ? '#efe8d6' : 'transparent',
                     color: 'var(--fm-ink-2)',
@@ -125,10 +129,10 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                   <span
                     className="flex items-center justify-center rounded"
                     style={{
-                      width: 15, height: 15, border: '1.5px solid',
+                      width: 18, height: 18, border: '1.5px solid',
                       borderColor: active ? 'var(--fm-ink)' : 'var(--fm-ink-3)',
                       background: active ? 'var(--fm-ink)' : 'transparent',
-                      color: '#fbf8f1', fontSize: 9, flexShrink: 0,
+                      color: '#fbf8f1', fontSize: 11, flexShrink: 0,
                     }}
                   >
                     {active ? '✓' : ''}
@@ -151,8 +155,8 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                   <button
                     key={t.id}
                     onClick={() => toggleTag('cuisine_tags', t.name)}
-                    className="fm-tag fm-tag-cuisine transition-all"
-                    style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', cursor: 'pointer' }}
+                    className={`fm-tag fm-tag-cuisine transition-all${active ? ' fm-tag-active' : ''}`}
+                    style={{ cursor: 'pointer' }}
                   >
                     {t.name}
                   </button>
@@ -172,7 +176,7 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                 <button
                   key={b.label}
                   onClick={() => selectCostBracket(i)}
-                  className="text-xs px-2.5 py-1 rounded-full border transition-all"
+                  className="text-sm px-3 py-1.5 rounded-full border transition-all"
                   style={{
                     fontFamily: 'var(--font-geist-mono)',
                     background: active ? 'var(--fm-ink)' : 'var(--fm-paper)',
@@ -197,8 +201,8 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                 <button
                   key={t.id}
                   onClick={() => toggleTag('taste_tags', t.name)}
-                  className="fm-tag fm-tag-taste transition-all"
-                  style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', opacity: active ? 1 : 0.7, cursor: 'pointer' }}
+                  className={`fm-tag fm-tag-taste transition-all${active ? ' fm-tag-active' : ''}`}
+                  style={{ opacity: active ? 1 : 0.75, cursor: 'pointer' }}
                 >
                   {t.name}
                 </button>
@@ -210,23 +214,57 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
 
       {/* Footer */}
       <div
-        className="px-4 py-3 flex items-center justify-between"
-        style={{
-          borderTop: '1px dashed var(--fm-line-2)',
-          fontFamily: 'var(--font-geist-mono)',
-          fontSize: 10,
-          color: 'var(--fm-ink-3)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-        }}
+        className="px-4 pt-2.5 pb-3 flex flex-col gap-2.5"
+        style={{ borderTop: '1px dashed var(--fm-line-2)', fontFamily: 'var(--font-geist-mono)' }}
       >
-        <span>{restaurantCount} 个钉</span>
-        {hasFilters && (
+        {/* Count + clear */}
+        <div
+          className="flex items-center justify-between"
+          style={{ fontSize: '1rem', color: 'var(--fm-ink-3)' }}
+        >
+          <span>{restaurantCount} 个钉</span>
+          {hasFilters && (
+            <button onClick={clearAll} style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer' }}>
+              重置
+            </button>
+          )}
+        </div>
+
+        {/* User section */}
+        {user ? (
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center justify-center rounded-full flex-shrink-0"
+              style={{ width: 32, height: 32, background: 'var(--fm-green)', color: '#fbf8f1', fontSize: '1rem', fontWeight: 600 }}
+            >
+              {user.email?.slice(0, 2).toUpperCase()}
+            </div>
+            <span
+              className="flex-1 truncate"
+              style={{ fontSize: '1rem', color: 'var(--fm-ink-3)' }}
+            >
+              {user.email}
+            </span>
+            <button
+              onClick={signOut}
+              style={{ fontSize: '1rem', color: 'var(--fm-ink-3)', cursor: 'pointer', flexShrink: 0 }}
+            >
+              退出
+            </button>
+          </div>
+        ) : (
           <button
-            onClick={clearAll}
-            style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer' }}
+            onClick={signIn}
+            className="w-full py-1.5 rounded-md transition-colors"
+            style={{
+              fontSize: '1rem',
+              color: 'var(--fm-ink-2)',
+              background: 'var(--fm-muted)',
+              border: '1px solid var(--fm-line-2)',
+              cursor: 'pointer',
+            }}
           >
-            重置
+            登录编辑
           </button>
         )}
       </div>
@@ -240,11 +278,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       className="mb-2"
       style={{
         fontFamily: 'var(--font-geist-mono)',
-        fontSize: 10,
-        letterSpacing: '0.12em',
+        fontSize: '1rem',
+        letterSpacing: '0.06em',
         textTransform: 'uppercase',
         color: 'var(--fm-ink-3)',
-        fontWeight: 500,
+        fontWeight: 600,
       }}
     >
       {children}

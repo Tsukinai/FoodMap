@@ -122,10 +122,10 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: 10,
+              fontSize: '1rem',
               color: 'var(--fm-ink-3)',
               textTransform: 'uppercase',
-              letterSpacing: '0.12em',
+              letterSpacing: '0.06em',
               marginBottom: 6,
             }}
           >
@@ -174,7 +174,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                   {geoResults.map((r, i) => (
                     <button
                       key={i}
-                      className="w-full text-left px-3 py-2 text-xs transition-colors"
+                      className="w-full text-left px-3 py-2.5 text-base transition-colors"
                       style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--fm-muted)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -189,7 +189,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           </div>
 
           {address && (
-            <p style={{ fontSize: 11, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
+            <p style={{ fontSize: '1rem', color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
               {address}{postalCode ? ` · ${postalCode}` : ''}
             </p>
           )}
@@ -226,10 +226,10 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                     <button
                       key={b.label}
                       onClick={() => setCostBracket(active ? null : i)}
-                      className="text-xs px-2 py-1 rounded-full border transition-all"
+                      className="text-base px-3 py-1.5 rounded-full border transition-all"
                       style={{
                         fontFamily: 'var(--font-geist-mono)',
-                        fontSize: 11,
+                        fontSize: '1rem',
                         background: active ? 'var(--fm-ink)' : 'var(--fm-paper)',
                         color: active ? '#fbf8f1' : 'var(--fm-ink-2)',
                         borderColor: active ? 'var(--fm-ink)' : 'var(--fm-line-2)',
@@ -297,7 +297,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                 border: '1px solid var(--fm-line-2)',
                 background: 'var(--fm-paper)',
                 padding: '10px 12px',
-                fontSize: 13,
+                fontSize: '1rem',
                 fontFamily: 'var(--font-geist-sans)',
                 color: 'var(--fm-ink)',
                 resize: 'none',
@@ -314,9 +314,9 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
             <button
               onClick={onClose}
               style={{
-                padding: '9px 14px',
+                padding: '10px 16px',
                 borderRadius: 8,
-                fontSize: 13,
+                fontSize: '1rem',
                 fontWeight: 500,
                 border: '1px solid var(--fm-line-2)',
                 background: 'transparent',
@@ -331,9 +331,9 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
               onClick={handleSave}
               disabled={saving || !name.trim()}
               style={{
-                padding: '9px 16px',
+                padding: '10px 18px',
                 borderRadius: 8,
-                fontSize: 13,
+                fontSize: '1rem',
                 fontWeight: 500,
                 border: '1px solid var(--fm-orange)',
                 background: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
@@ -371,7 +371,7 @@ function FmInput({ value, onChange, onKeyDown, placeholder }: {
         border: '1px solid var(--fm-line-2)',
         borderRadius: 8,
         padding: '12px 14px',
-        fontSize: 13,
+        fontSize: '1rem',
         fontFamily: 'var(--font-geist-sans)',
         color: 'var(--fm-ink)',
         outline: 'none',
@@ -388,11 +388,11 @@ function FormSection({ label, children, noMargin }: { label: string; children: R
       <p
         style={{
           fontFamily: 'var(--font-geist-mono)',
-          fontSize: 10,
-          letterSpacing: '0.12em',
+          fontSize: '1rem',
+          letterSpacing: '0.06em',
           textTransform: 'uppercase',
           color: 'var(--fm-ink-3)',
-          fontWeight: 500,
+          fontWeight: 600,
           marginBottom: 8,
         }}
       >

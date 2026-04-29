@@ -6,7 +6,6 @@ import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import FilterPanel from '@/components/sidebar/FilterPanel'
-import AuthButton from '@/components/AuthButton'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -105,13 +104,6 @@ export default function HomePage() {
 
       {/* Map area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Auth button — floating top-right */}
-        <div
-          className="absolute top-3 right-3 z-20"
-        >
-          <AuthButton user={user} />
-        </div>
-
         {/* Map */}
         <div className="flex-1 relative">
           {loading ? (

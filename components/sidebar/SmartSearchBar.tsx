@@ -47,7 +47,7 @@ export default function SmartSearchBar({ allTags, onFilter }: Props) {
         style={{
           background: 'var(--fm-paper)',
           border: '1px solid var(--fm-line-2)',
-          height: 36,
+          height: 44,
         }}
       >
         <input
@@ -55,7 +55,7 @@ export default function SmartSearchBar({ allTags, onFilter }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="邮编、地址，或问一句话…"
-          className="flex-1 bg-transparent outline-none text-xs"
+          className="flex-1 bg-transparent outline-none text-sm"
           style={{ color: 'var(--fm-ink)' }}
           disabled={loading}
         />
@@ -66,7 +66,7 @@ export default function SmartSearchBar({ allTags, onFilter }: Props) {
             className="rounded px-1.5 py-0.5 transition-colors"
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: 10,
+              fontSize: '1rem',
               fontWeight: 500,
               background: loading ? 'var(--fm-line)' : 'var(--fm-orange)',
               color: '#fff',
@@ -78,11 +78,11 @@ export default function SmartSearchBar({ allTags, onFilter }: Props) {
           <span
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: 10,
+              fontSize: '1rem',
               color: 'var(--fm-ink-4)',
               border: '1px solid var(--fm-line-2)',
               borderRadius: 3,
-              padding: '1px 4px',
+              padding: '2px 6px',
             }}
           >
             ⌘K
@@ -94,7 +94,7 @@ export default function SmartSearchBar({ allTags, onFilter }: Props) {
           className="rounded px-2 py-1"
           style={{
             fontFamily: 'var(--font-geist-mono)',
-            fontSize: 10,
+            fontSize: '1rem',
             background: '#f0d9c4',
             color: 'var(--fm-orange-dark)',
           }}

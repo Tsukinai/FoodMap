@@ -91,7 +91,7 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
         {isOwner && (
           <button
             onClick={() => setAddingPin((v) => !v)}
-            className="pointer-events-auto flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-2 shadow-md transition-colors"
+            className="pointer-events-auto flex items-center gap-1.5 text-sm font-medium rounded-lg px-3 py-2 shadow-md transition-colors"
             style={{
               fontFamily: 'var(--font-geist-sans)',
               background: addingPin ? '#a43d1f' : 'var(--fm-orange)',
@@ -112,7 +112,7 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
             background: 'var(--fm-paper)',
             border: '1px solid var(--fm-line-2)',
             boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            fontSize: 11,
+            fontSize: '1rem',
             color: 'var(--fm-ink-2)',
             fontFamily: 'var(--font-geist-mono)',
           }}
@@ -127,7 +127,7 @@ export default function MapContainer({ restaurants, isOwner, filters, onRestaura
       <div
         className="absolute bottom-2 left-2 rounded px-1.5 py-0.5 pointer-events-none"
         style={{
-          fontSize: 9,
+          fontSize: '1rem',
           color: 'var(--fm-ink-3)',
           background: 'rgba(251,248,241,0.85)',
           fontFamily: 'var(--font-geist-mono)',

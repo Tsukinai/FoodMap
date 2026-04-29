@@ -105,7 +105,7 @@ export default function TagInput({ type, allTags, selectedIds, onChange, onTagCr
           border: '1px solid var(--fm-line-2)',
           borderRadius: 8,
           padding: '8px 12px',
-          fontSize: 12,
+          fontSize: '1rem',
           fontFamily: 'var(--font-geist-sans)',
           color: 'var(--fm-ink)',
           outline: 'none',

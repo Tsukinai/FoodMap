@@ -75,7 +75,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
           offset={30}
           closeButton={false}
           onClose={onClick}
-          maxWidth="316px"
+          maxWidth="360px"
           className="foodmap-popup"
         >
           <div
@@ -83,7 +83,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               background: 'var(--fm-paper)',
               fontFamily: 'var(--font-geist-sans)',
               color: 'var(--fm-ink)',
-              width: 300,
+              width: 340,
               borderRadius: 12,
               overflow: 'hidden',
               boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
@@ -101,12 +101,12 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 onClick={onClick}
                 className="absolute top-2 right-2 flex items-center justify-center rounded-full"
                 style={{
-                  width: 22,
-                  height: 22,
+                  width: 26,
+                  height: 26,
                   background: 'rgba(251,248,241,0.9)',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: 14,
+                  fontSize: '1rem',
                   color: 'var(--fm-ink-3)',
                   lineHeight: 1,
                 }}
@@ -134,7 +134,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 <div
                   style={{
                     fontFamily: 'var(--font-geist-mono)',
-                    fontSize: 10,
+                    fontSize: '1rem',
                     color: 'var(--fm-ink-3)',
                     marginBottom: 8,
                   }}
@@ -149,7 +149,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 <div
                   style={{
                     fontFamily: 'var(--font-geist-mono)',
-                    fontSize: 12,
+                    fontSize: '1rem',
                     color: 'var(--fm-ink-2)',
                     marginBottom: 10,
                   }}
@@ -180,7 +180,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               {restaurant.notes && (
                 <p
                   style={{
-                    fontSize: 12,
+                    fontSize: '1rem',
                     color: 'var(--fm-ink-2)',
                     lineHeight: 1.55,
                     fontStyle: 'italic',
@@ -201,14 +201,14 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                     onClick={handleDelete}
                     disabled={deleting}
                     style={{
-                      fontSize: 11,
+                      fontSize: '1rem',
                       fontFamily: 'var(--font-geist-sans)',
                       border: '1px solid var(--fm-line-2)',
                       background: 'transparent',
                       color: deleting ? 'var(--fm-ink-4)' : '#a43d1f',
                       cursor: deleting ? 'default' : 'pointer',
                       borderRadius: 6,
-                      padding: '5px 10px',
+                      padding: '7px 12px',
                     }}
                   >
                     {deleting ? '删除中…' : '删除'}
