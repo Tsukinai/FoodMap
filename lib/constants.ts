@@ -7,21 +7,15 @@ export const SINGAPORE_BOUNDS: [[number, number], [number, number]] = [
 
 // Approximate bounding boxes per region [west, south, east, north]
 export const REGION_BOUNDS: Record<string, [number, number, number, number]> = {
-  '中部':     [103.780, 1.250, 103.900, 1.390],
-  '东部':     [103.880, 1.290, 104.050, 1.420],
-  '西部':     [103.620, 1.270, 103.800, 1.410],
-  '北部':     [103.750, 1.390, 103.900, 1.490],
-  '东北部':   [103.840, 1.340, 103.970, 1.440],
-  'CBD/滨海湾': [103.840, 1.270, 103.870, 1.310],
-  '牛车水':   [103.840, 1.275, 103.855, 1.288],
-  '小印度':   [103.848, 1.303, 103.862, 1.316],
-  '甘榜格南': [103.855, 1.298, 103.875, 1.313],
+  '中部':   [103.780, 1.250, 103.900, 1.390],
+  '东部':   [103.880, 1.290, 104.050, 1.420],
+  '西部':   [103.620, 1.270, 103.800, 1.410],
+  '北部':   [103.750, 1.390, 103.900, 1.490],
+  '东北部': [103.840, 1.340, 103.970, 1.440],
 }
 
 export const REGIONS = Object.keys(REGION_BOUNDS)
-
-export const BROAD_REGIONS = ['中部', '东部', '西部', '北部', '东北部']
-export const HOOD_REGIONS  = ['CBD/滨海湾', '牛车水', '小印度', '甘榜格南']
+export const BROAD_REGIONS = REGIONS
 
 export const CUISINE_COLORS: Record<string, string> = {
   // Singapore-specific cuisines
