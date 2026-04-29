@@ -116,10 +116,11 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
-              fontSize: '1rem',
-              color: 'var(--fm-ink-3)',
+              fontSize: 10,
+              color: 'var(--fm-ink-4)',
               textTransform: 'uppercase',
-              letterSpacing: '0.06em',
+              letterSpacing: '0.1em',
+              fontWeight: 500,
               marginBottom: 6,
             }}
           >
@@ -183,7 +184,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           </div>
 
           {address && (
-            <p style={{ fontSize: '1rem', color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
               {address}{postalCode ? ` · ${postalCode}` : ''}
             </p>
           )}
@@ -223,7 +224,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>
                 <input
                   type="number"
                   value={costRange[0] === 0 ? '' : costRange[0]}
@@ -234,12 +235,12 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                   placeholder="最少"
                   min={0}
                   max={costRange[1]}
-                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: '1rem', fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
+                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: 13, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
                   onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
                 />
-                <span style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>–</span>
-                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
+                <span style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', fontSize: 13 }}>–</span>
+                <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>
                 <input
                   type="number"
                   value={costRange[1] === MAX_COST ? '' : costRange[1]}
@@ -251,7 +252,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
                   placeholder="不限"
                   min={costRange[0]}
                   max={MAX_COST}
-                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: '1rem', fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
+                  style={{ width: 52, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '4px 6px', fontSize: 13, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
                   onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
                   onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
                 />
@@ -332,7 +333,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
               style={{
                 padding: '10px 16px',
                 borderRadius: 8,
-                fontSize: '1rem',
+                fontSize: 13.5,
                 fontWeight: 500,
                 border: '1px solid var(--fm-line-2)',
                 background: 'transparent',
@@ -349,7 +350,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
               style={{
                 padding: '10px 18px',
                 borderRadius: 8,
-                fontSize: '1rem',
+                fontSize: 13.5,
                 fontWeight: 500,
                 border: '1px solid var(--fm-orange)',
                 background: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
@@ -404,11 +405,11 @@ function FormSection({ label, children, noMargin }: { label: string; children: R
       <p
         style={{
           fontFamily: 'var(--font-geist-mono)',
-          fontSize: '1rem',
-          letterSpacing: '0.06em',
+          fontSize: 10,
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: 'var(--fm-ink-3)',
-          fontWeight: 600,
+          color: 'var(--fm-ink-4)',
+          fontWeight: 500,
           marginBottom: 8,
         }}
       >

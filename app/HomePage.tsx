@@ -38,6 +38,7 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const supabase = createClient()
 
@@ -93,19 +94,57 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
-      {/* Sidebar */}
-      <FilterPanel
-        allTags={allTags}
-        filters={filters}
-        onChange={setFilters}
-        restaurantCount={allRestaurants.length}
-        user={user}
-        isOwner={isOwner}
-        onAddPin={() => setAddingPin(true)}
-      />
+      {/* Sidebar — collapsible wrapper */}
+      <div
+        style={{
+          width: sidebarOpen ? 292 : 0,
+          flexShrink: 0,
+          overflow: 'hidden',
+          transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+        }}
+      >
+        <FilterPanel
+          allTags={allTags}
+          filters={filters}
+          onChange={setFilters}
+          restaurantCount={allRestaurants.length}
+          user={user}
+          isOwner={isOwner}
+          onAddPin={() => setAddingPin(true)}
+          onCollapse={() => setSidebarOpen(false)}
+        />
+      </div>
 
       {/* Map area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
+        {/* Floating expand button (shown when sidebar is collapsed) */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            title="展开侧边栏"
+            style={{
+              position: 'absolute',
+              left: 16,
+              top: 16,
+              zIndex: 10,
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'var(--fm-paper)',
+              border: '1px solid var(--fm-line)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 15,
+              color: 'var(--fm-ink)',
+              cursor: 'pointer',
+            }}
+          >
+            ▸
+          </button>
+        )}
+
         {/* Map */}
         <div className="flex-1 relative">
           {loading ? (

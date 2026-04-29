@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Marker, Popup } from 'react-map-gl/maplibre'
 import type { Restaurant } from '@/lib/types'
+import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
 
 interface Props {
   restaurant: Restaurant
@@ -17,9 +18,14 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
   const [deleting, setDeleting] = useState(false)
 
   const cuisineTags = restaurant.tags.filter((t) => t.type === 'cuisine')
-  const dishTags = restaurant.tags.filter((t) => t.type === 'dish')
-  const tasteTags = restaurant.tags.filter((t) => t.type === 'taste')
-  const sceneTags = restaurant.tags.filter((t) => t.type === 'scene')
+  const dishTags    = restaurant.tags.filter((t) => t.type === 'dish')
+  const tasteTags   = restaurant.tags.filter((t) => t.type === 'taste')
+  const sceneTags   = restaurant.tags.filter((t) => t.type === 'scene')
+
+  // Pick colour from first cuisine tag, fall back to orange
+  const primaryCuisine = cuisineTags[0]?.name
+  const pinColor  = CUISINE_COLORS[primaryCuisine ?? ''] ?? 'var(--fm-orange)'
+  const pinBg     = CUISINE_BG[primaryCuisine ?? '']    ?? '#fdf0e6'
 
   const cost = restaurant.cost_min && restaurant.cost_max
     ? `S$ ${restaurant.cost_min}–${restaurant.cost_max}`
@@ -47,23 +53,22 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
           onClick()
         }}
       >
+        {/* Pin SVG — 24×32, colour-coded by cuisine */}
         <div
-          className="cursor-pointer transition-transform hover:scale-110 relative"
-          style={{ transform: isSelected ? 'scale(1.15)' : undefined }}
+          className="cursor-pointer transition-transform"
+          style={{
+            transform: isSelected ? 'scale(1.25) translateY(-2px)' : 'scale(1)',
+            filter: isSelected
+              ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.32))'
+              : 'drop-shadow(0 2px 4px rgba(0,0,0,0.22))',
+          }}
         >
-          <svg
-            width="18"
-            height="24"
-            viewBox="0 0 18 24"
-            style={{ display: 'block', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.22))' }}
-          >
+          <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
             <path
-              d="M9 0C4.029 0 0 4.029 0 9c0 6.75 9 15 9 15s9-8.25 9-15C18 4.029 13.971 0 9 0z"
-              fill={isSelected ? '#a43d1f' : '#d96b2c'}
-              stroke="#7a2e16"
-              strokeWidth="0.8"
+              d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
+              fill={isSelected ? '#1f1c18' : pinColor}
             />
-            <circle cx="9" cy="9" r="3" fill="#fbf8f1" />
+            <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
           </svg>
         </div>
       </Marker>
@@ -73,7 +78,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
           longitude={restaurant.location_lng}
           latitude={restaurant.location_lat}
           anchor="bottom"
-          offset={30}
+          offset={36}
           closeButton={false}
           onClose={onClick}
           maxWidth="360px"
@@ -85,19 +90,38 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               fontFamily: 'var(--font-geist-sans)',
               color: 'var(--fm-ink)',
               width: 340,
-              borderRadius: 12,
+              borderRadius: 14,
               overflow: 'hidden',
-              boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.14)',
             }}
           >
-            {/* Photo placeholder */}
+            {/* Colour header band */}
             <div
-              className="relative"
               style={{
-                height: 96,
-                background: 'repeating-linear-gradient(45deg, #e6ddc6 0 6px, #dcd3bc 6px 12px)',
+                height: 80,
+                background: `linear-gradient(135deg, ${pinColor}cc 0%, ${pinColor}88 100%)`,
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
+              {/* Cuisine badge */}
+              {primaryCuisine && (
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: 99,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: 'rgba(255,255,255,0.88)',
+                    color: pinColor,
+                    fontFamily: 'var(--font-geist-mono)',
+                  }}
+                >
+                  {primaryCuisine}
+                </span>
+              )}
               <button
                 onClick={onClick}
                 className="absolute top-2 right-2 flex items-center justify-center rounded-full"
@@ -107,7 +131,7 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                   background: 'rgba(251,248,241,0.9)',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '1rem',
+                  fontSize: 14,
                   color: 'var(--fm-ink-3)',
                   lineHeight: 1,
                 }}
@@ -122,9 +146,9 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
               <div
                 style={{
                   fontFamily: 'var(--font-instrument-serif)',
-                  fontSize: 22,
-                  lineHeight: 1.1,
-                  marginBottom: 2,
+                  fontSize: 21,
+                  lineHeight: 1.15,
+                  marginBottom: 3,
                 }}
               >
                 {restaurant.name}
@@ -135,36 +159,19 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 <div
                   style={{
                     fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '1rem',
+                    fontSize: 11.5,
                     color: 'var(--fm-ink-3)',
-                    marginBottom: 8,
-                  }}
-                >
-                  {restaurant.address}
-                  {restaurant.postal_code ? ` · ${restaurant.postal_code}` : ''}
-                </div>
-              )}
-
-              {/* Cost */}
-              {cost && (
-                <div
-                  style={{
-                    fontFamily: 'var(--font-geist-mono)',
-                    fontSize: '1rem',
-                    color: 'var(--fm-ink-2)',
                     marginBottom: 10,
                   }}
                 >
-                  {cost} / 人
+                  📍 {restaurant.address}
+                  {restaurant.postal_code ? ` · ${restaurant.postal_code}` : ''}
                 </div>
               )}
 
               {/* Tags */}
               {(cuisineTags.length > 0 || dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                  {cuisineTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>
-                  ))}
                   {dishTags.map((t) => (
                     <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>
                   ))}
@@ -177,39 +184,56 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 </div>
               )}
 
+              {/* Cost */}
+              {cost && (
+                <div
+                  style={{
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontSize: 12,
+                    color: 'var(--fm-ink-2)',
+                    marginBottom: 10,
+                  }}
+                >
+                  {cost} <span style={{ color: 'var(--fm-ink-4)' }}>/ 人</span>
+                </div>
+              )}
+
               {/* Notes */}
               {restaurant.notes && (
                 <p
                   style={{
-                    fontSize: '1rem',
+                    fontSize: 12.5,
                     color: 'var(--fm-ink-2)',
                     lineHeight: 1.55,
                     fontStyle: 'italic',
+                    background: 'var(--fm-cream)',
+                    borderRadius: 8,
+                    padding: '7px 10px',
                     marginBottom: 10,
                   }}
                 >
-                  {restaurant.notes}
+                  "{restaurant.notes}"
                 </p>
               )}
 
-              {/* Divider */}
+              {/* Divider + actions */}
               <div style={{ height: 1, background: 'var(--fm-line)', marginBottom: 10 }} />
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 7 }}>
                 {isOwner && (
                   <>
                     <button
                       onClick={onEdit}
                       style={{
-                        fontSize: '1rem',
+                        fontSize: 12.5,
                         fontFamily: 'var(--font-geist-sans)',
-                        border: '1px solid var(--fm-line-2)',
+                        border: '1.5px solid var(--fm-line-2)',
                         background: 'transparent',
                         color: 'var(--fm-ink-2)',
                         cursor: 'pointer',
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: '7px 12px',
+                        fontWeight: 500,
+                        transition: 'border-color 0.12s',
                       }}
                     >
                       编辑
@@ -218,14 +242,15 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                       onClick={handleDelete}
                       disabled={deleting}
                       style={{
-                        fontSize: '1rem',
+                        fontSize: 12.5,
                         fontFamily: 'var(--font-geist-sans)',
-                        border: '1px solid var(--fm-line-2)',
+                        border: '1.5px solid var(--fm-line-2)',
                         background: 'transparent',
                         color: deleting ? 'var(--fm-ink-4)' : '#a43d1f',
                         cursor: deleting ? 'default' : 'pointer',
-                        borderRadius: 6,
+                        borderRadius: 8,
                         padding: '7px 12px',
+                        fontWeight: 500,
                       }}
                     >
                       {deleting ? '删除中…' : '删除'}

@@ -71,6 +71,21 @@
 :root {
   /* FoodMap warm cream palette */
   --background: #f5f1e8;
+  /* FoodMap design tokens — used as var(--fm-*) throughout components */
+  --fm-orange: #d96b2c;
+  --fm-orange-dark: #a43d1f;
+  --fm-green: #3f5a3d;
+  --fm-gold: #c89233;
+  --fm-plum: #7a3a4a;
+  --fm-ink: #1f1c18;
+  --fm-ink-2: #3b3630;
+  --fm-ink-3: #6b635a;
+  --fm-ink-4: #a39a8d;
+  --fm-line: #e6dfd0;
+  --fm-line-2: #d8cfbb;
+  --fm-cream: #f5f1e8;
+  --fm-paper: #fbf8f1;
+  --fm-muted: #ece5d2;
   --foreground: #1f1c18;
   --card: #fbf8f1;
   --card-foreground: #1f1c18;
@@ -141,14 +156,14 @@
   z-index: 20;
 }
 
-/* FoodMap tag chip styles */
+/* ── FoodMap tag chip styles ── */
 .fm-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  font-size: 1rem;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12px;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-weight: 500;
   background: #ece5d2;
@@ -156,6 +171,7 @@
   border: 1.5px solid transparent;
   -webkit-tap-highlight-color: transparent;
   outline: none;
+  white-space: nowrap;
 }
 .fm-tag-cuisine { background: #e7d8c5; color: #6b432a; }
 .fm-tag-cuisine.fm-tag-active { background: #c9a070; color: #3d1a04; border-color: #a43d1f; }
@@ -165,3 +181,56 @@
 .fm-tag-taste.fm-tag-active   { background: #e2a878; color: #5a1a08; border-color: #a43d1f; }
 .fm-tag-scene   { background: #dcd6e6; color: #4a3d6b; }
 .fm-tag-scene.fm-tag-active   { background: #b8a8d8; color: #251840; border-color: #4a3d6b; }
+
+/* ── Filter chip (region / cuisine / taste / scene toggles) ── */
+.fm-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-weight: 500;
+  background: var(--fm-cream);
+  color: var(--fm-ink-2);
+  border: 1.5px solid var(--fm-line);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  text-align: center;
+}
+.fm-chip:hover { border-color: var(--fm-ink-3); }
+.fm-chip.active { background: var(--fm-ink); color: var(--fm-paper); border-color: var(--fm-ink); }
+
+/* Taste chip active */
+.fm-chip-taste.active  { background: #e2a878; color: #5a1a08; border-color: #a43d1f; }
+.fm-chip-taste         { background: #f0d9c4; color: #a43d1f; border-color: transparent; }
+
+/* Scene chip active */
+.fm-chip-scene.active  { background: #b8a8d8; color: #251840; border-color: #4a3d6b; }
+.fm-chip-scene         { background: #dcd6e6; color: #4a3d6b; border-color: transparent; }
+
+/* ── Filter section label ── */
+.fm-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fm-ink-4);
+  margin-bottom: 8px;
+}
+.fm-filter-label-count {
+  background: var(--fm-orange);
+  color: #fff;
+  border-radius: 99px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 700;
+}

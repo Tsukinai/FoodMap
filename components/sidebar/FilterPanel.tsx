@@ -2,11 +2,17 @@
 
 import { useState } from 'react'
 import type { Tag, FilterPayload } from '@/lib/types'
-import { REGIONS, PRESET_TASTE_TAGS } from '@/lib/constants'
+import {
+  BROAD_REGIONS,
+  HOOD_REGIONS,
+  CUISINE_COLORS,
+  CUISINE_BG,
+  PRESET_TASTE_TAGS,
+  PRESET_SCENE_TAGS,
+} from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import SmartSearchBar from './SmartSearchBar'
 import { createClient } from '@/lib/supabase/client'
-import { Slider } from '@/components/ui/slider'
 
 interface Props {
   allTags: Tag[]
@@ -16,12 +22,21 @@ interface Props {
   user: User | null
   onAddPin?: () => void
   isOwner: boolean
+  onCollapse?: () => void
 }
 
-const MAX_COST = 200
+const MAX_COST = 300
 
-export default function FilterPanel({ allTags, filters, onChange, restaurantCount, user, onAddPin, isOwner }: Props) {
-  const [costRange, setCostRange] = useState<[number, number]>([0, MAX_COST])
+export default function FilterPanel({
+  allTags,
+  filters,
+  onChange,
+  restaurantCount,
+  user,
+  onAddPin,
+  isOwner,
+  onCollapse,
+}: Props) {
   const supabase = createClient()
 
   async function signIn() {
@@ -36,165 +51,224 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
     location.reload()
   }
 
-  const cuisineTags = allTags.filter((t) => t.type === 'cuisine')
-  const tasteTags = allTags.filter((t) => t.type === 'taste')
+  // ── Tag helpers ──────────────────────────────────────────────────────────
+  const cuisineTags   = allTags.filter((t) => t.type === 'cuisine')
+  const tasteTags     = allTags.filter((t) => t.type === 'taste')
+  const sceneTags     = allTags.filter((t) => t.type === 'scene')
+
   const displayTasteTags = tasteTags.length > 0
     ? tasteTags
-    : PRESET_TASTE_TAGS.map((name, i) => ({ id: `preset-${i}`, name, type: 'taste' as const, created_at: '' }))
+    : PRESET_TASTE_TAGS.map((name, i) => ({ id: `pt-${i}`, name, type: 'taste' as const, created_at: '' }))
 
-  function toggleTag(key: keyof FilterPayload, name: string) {
+  const displaySceneTags = sceneTags.length > 0
+    ? sceneTags
+    : PRESET_SCENE_TAGS.map((name, i) => ({ id: `ps-${i}`, name, type: 'scene' as const, created_at: '' }))
+
+  // ── Toggle helpers ───────────────────────────────────────────────────────
+  function toggleArr(key: keyof FilterPayload, name: string) {
     const arr = (filters[key] as string[]) ?? []
-    const next = arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name]
-    onChange({ ...filters, [key]: next })
+    onChange({ ...filters, [key]: arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name] })
   }
 
   function toggleRegion(region: string) {
-    const current = filters.regions ?? []
-    const next = current.includes(region) ? current.filter((r) => r !== region) : [...current, region]
+    const next = filters.regions.includes(region)
+      ? filters.regions.filter((r) => r !== region)
+      : [...filters.regions, region]
     onChange({ ...filters, regions: next })
   }
 
-  function applyRange(range: [number, number]) {
-    setCostRange(range)
-    onChange({
-      ...filters,
-      min_cost: range[0] === 0 ? null : range[0],
-      max_cost: range[1] === MAX_COST ? null : range[1],
-    })
+  function handleCostMin(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value === '' ? null : Math.max(0, Number(e.target.value))
+    onChange({ ...filters, min_cost: v })
   }
 
-  function handleMinInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = Math.max(0, Math.min(Number(e.target.value) || 0, costRange[1]))
-    applyRange([v, costRange[1]])
-  }
-
-  function handleMaxInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
-    const v = Math.max(costRange[0], Math.min(raw, MAX_COST))
-    applyRange([costRange[0], v])
+  function handleCostMax(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value === '' ? null : Math.min(MAX_COST, Number(e.target.value))
+    onChange({ ...filters, max_cost: v })
   }
 
   function clearAll() {
-    setCostRange([0, MAX_COST])
-    onChange({ cuisine_tags: [], dish_tags: [], taste_tags: [], scene_tags: [], max_cost: null, min_cost: null, area_keyword: null, regions: [] })
+    onChange({
+      cuisine_tags: [],
+      dish_tags:    [],
+      taste_tags:   [],
+      scene_tags:   [],
+      max_cost:     null,
+      min_cost:     null,
+      area_keyword: null,
+      regions:      [],
+    })
   }
 
   const hasFilters =
     filters.cuisine_tags.length > 0 ||
     filters.dish_tags.length > 0 ||
     (filters.taste_tags?.length ?? 0) > 0 ||
+    (filters.scene_tags?.length ?? 0) > 0 ||
     filters.max_cost !== null ||
     filters.min_cost !== null ||
     filters.area_keyword !== null ||
     filters.regions.length > 0
 
+  // ── Shared input style ───────────────────────────────────────────────────
   const costInputStyle: React.CSSProperties = {
-    width: 56,
-    background: 'var(--fm-paper)',
-    border: '1px solid var(--fm-line-2)',
-    borderRadius: 6,
-    padding: '4px 6px',
-    fontSize: '1rem',
+    flex: 1,
+    background: 'var(--fm-cream)',
+    border: '1.5px solid var(--fm-line-2)',
+    borderRadius: 8,
+    padding: '7px 10px',
+    fontSize: 13,
     fontFamily: 'var(--font-geist-mono)',
     color: 'var(--fm-ink)',
     outline: 'none',
-    textAlign: 'center',
+    textAlign: 'center' as const,
+    minWidth: 0,
   }
 
   return (
     <aside
       className="h-full flex flex-col border-r overflow-hidden"
       style={{
-        width: 300,
+        width: 292,
         background: 'var(--fm-paper)',
         borderColor: 'var(--fm-line)',
         color: 'var(--fm-ink)',
       }}
     >
-      {/* Header */}
-      <div className="px-5 pt-5 pb-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--fm-line)' }}>
-        <div style={{ fontFamily: 'var(--font-instrument-serif)', fontSize: 26, letterSpacing: '-0.01em', lineHeight: 1 }}>
-          FoodMap<span style={{ color: 'var(--fm-orange)' }}>.</span>
-        </div>
-        {isOwner && onAddPin && (
-          <button
-            onClick={onAddPin}
+      {/* ── Header ── */}
+      <div
+        className="px-5 pt-5 pb-4 flex flex-col gap-3"
+        style={{ borderBottom: '1px solid var(--fm-line)' }}
+      >
+        <div className="flex items-center justify-between">
+          <div
             style={{
-              padding: '5px 12px',
-              borderRadius: 6,
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              background: 'var(--fm-orange)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-geist-sans)',
-              flexShrink: 0,
+              fontFamily: 'var(--font-instrument-serif)',
+              fontSize: 26,
+              letterSpacing: '-0.01em',
+              lineHeight: 1,
             }}
           >
-            ＋ 打地图钉
-          </button>
-        )}
-      </div>
+            FoodMap<span style={{ color: 'var(--fm-orange)' }}>.</span>
+          </div>
 
-      {/* Smart search */}
-      <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center gap-2">
+          {isOwner && onAddPin && (
+            <button
+              onClick={onAddPin}
+              style={{
+                padding: '6px 13px',
+                borderRadius: 8,
+                fontSize: 12.5,
+                fontWeight: 600,
+                background: 'var(--fm-orange)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-geist-sans)',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(217,107,44,0.25)',
+              }}
+            >
+              ＋ 打地图钉
+            </button>
+          )}
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              title="折叠侧边栏"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--fm-muted)',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--fm-ink-3)',
+                fontSize: 14,
+                flexShrink: 0,
+              }}
+            >
+              ◂
+            </button>
+          )}
+          </div>
+        </div>
+
+        {/* Smart search */}
         <SmartSearchBar
           allTags={allTags}
           onFilter={(payload) => onChange({ ...filters, ...payload })}
         />
       </div>
 
-      {/* Scrollable filter body */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
+      {/* ── Scrollable filter body ── */}
+      <div className="flex-1 overflow-y-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Region */}
+        {/* ── Region ── */}
         <section>
-          <SectionLabel>区域</SectionLabel>
-          <div className="flex flex-col gap-0.5">
-            {REGIONS.map((region) => {
-              const active = (filters.regions ?? []).includes(region)
-              return (
-                <button
-                  key={region}
-                  onClick={() => toggleRegion(region)}
-                  className="flex items-center gap-2 text-sm px-2 py-2 rounded-md text-left transition-colors"
-                  style={{
-                    background: active ? '#efe8d6' : 'transparent',
-                    color: 'var(--fm-ink-2)',
-                  }}
-                >
-                  <span
-                    className="flex items-center justify-center rounded"
-                    style={{
-                      width: 18, height: 18, border: '1.5px solid',
-                      borderColor: active ? 'var(--fm-ink)' : 'var(--fm-ink-3)',
-                      background: active ? 'var(--fm-ink)' : 'transparent',
-                      color: '#fbf8f1', fontSize: 11, flexShrink: 0,
-                    }}
-                  >
-                    {active ? '✓' : ''}
-                  </span>
-                  {region}
-                </button>
-              )
-            })}
+          <FilterLabel count={filters.regions.length}>区域</FilterLabel>
+
+          {/* Broad regions: 3-column grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, marginBottom: 5 }}>
+            {BROAD_REGIONS.map((r) => (
+              <button
+                key={r}
+                className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
+                style={{ fontSize: 12, padding: '6px 4px' }}
+                onClick={() => toggleRegion(r)}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
+          {/* Thin divider */}
+          <div style={{ height: 1, background: 'var(--fm-line)', margin: '4px 0 6px' }} />
+
+          {/* Neighbourhoods: 2-column grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 5 }}>
+            {HOOD_REGIONS.map((r) => (
+              <button
+                key={r}
+                className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
+                style={{ fontSize: 11.5, padding: '6px 4px' }}
+                onClick={() => toggleRegion(r)}
+              >
+                {r}
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* Cuisine tags */}
+        {/* ── Cuisine ── */}
         {cuisineTags.length > 0 && (
           <section>
-            <SectionLabel>菜系</SectionLabel>
-            <div className="flex flex-wrap gap-1.5">
+            <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
               {cuisineTags.map((t) => {
                 const active = filters.cuisine_tags.includes(t.name)
+                const fg = CUISINE_COLORS[t.name] ?? 'var(--fm-ink-2)'
+                const bg = CUISINE_BG[t.name]     ?? 'var(--fm-muted)'
                 return (
                   <button
                     key={t.id}
-                    onClick={() => toggleTag('cuisine_tags', t.name)}
-                    className={`fm-tag fm-tag-cuisine transition-all${active ? ' fm-tag-active' : ''}`}
-                    style={{ cursor: 'pointer' }}
+                    onClick={() => toggleArr('cuisine_tags', t.name)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      background: active ? fg : bg,
+                      color: active ? '#fff' : fg,
+                      border: `1.5px solid ${active ? fg : 'transparent'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
                   >
                     {t.name}
                   </button>
@@ -204,59 +278,51 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
           </section>
         )}
 
-        {/* Cost slider + inputs */}
+        {/* ── Cost range ── */}
         <section>
-          <SectionLabel>人均消费</SectionLabel>
-          <div className="px-1 pt-1 pb-3">
-            <Slider
-              value={costRange}
-              min={0}
-              max={MAX_COST}
-              step={5}
-              onValueChange={(v) => applyRange(v as [number, number])}
-            />
-          </div>
+          <FilterLabel count={(filters.min_cost || filters.max_cost) ? 1 : 0} countLabel="已设">
+            人均消费 (S$)
+          </FilterLabel>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
             <input
               type="number"
-              value={costRange[0] === 0 ? '' : costRange[0]}
-              onChange={handleMinInput}
-              placeholder="0"
+              value={filters.min_cost ?? ''}
+              onChange={handleCostMin}
+              placeholder="下限"
               min={0}
-              max={costRange[1]}
-              style={costInputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-            />
-            <span style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>–</span>
-            <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: '1rem', color: 'var(--fm-ink-3)' }}>$</span>
-            <input
-              type="number"
-              value={costRange[1] === MAX_COST ? '' : costRange[1]}
-              onChange={handleMaxInput}
-              placeholder="不限"
-              min={costRange[0]}
               max={MAX_COST}
               style={costInputStyle}
               onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
               onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
             />
+            <span style={{ color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', fontSize: 13 }}>–</span>
+            <input
+              type="number"
+              value={filters.max_cost ?? ''}
+              onChange={handleCostMax}
+              placeholder="上限"
+              min={0}
+              max={MAX_COST}
+              style={costInputStyle}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+            />
+            <span style={{ fontSize: 11, color: 'var(--fm-ink-4)', whiteSpace: 'nowrap' }}>每人</span>
           </div>
         </section>
 
-        {/* Taste tags */}
+        {/* ── Taste ── */}
         <section>
-          <SectionLabel>口味</SectionLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
             {displayTasteTags.map((t) => {
               const active = (filters.taste_tags ?? []).includes(t.name)
               return (
                 <button
                   key={t.id}
-                  onClick={() => toggleTag('taste_tags', t.name)}
-                  className={`fm-tag fm-tag-taste transition-all${active ? ' fm-tag-active' : ''}`}
-                  style={{ opacity: active ? 1 : 0.75, cursor: 'pointer' }}
+                  onClick={() => toggleArr('taste_tags', t.name)}
+                  className={`fm-chip fm-chip-taste${active ? ' active' : ''}`}
+                  style={{ fontSize: 12 }}
                 >
                   {t.name}
                 </button>
@@ -264,27 +330,51 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
             })}
           </div>
         </section>
+
+        {/* ── Scene ── */}
+        <section>
+          <FilterLabel count={filters.scene_tags?.length ?? 0}>场合</FilterLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {displaySceneTags.map((t) => {
+              const active = (filters.scene_tags ?? []).includes(t.name)
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => toggleArr('scene_tags', t.name)}
+                  className={`fm-chip fm-chip-scene${active ? ' active' : ''}`}
+                  style={{ fontSize: 12 }}
+                >
+                  {t.name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <div
-        className="px-4 pt-2.5 pb-3 flex flex-col gap-2.5"
+        className="px-4 pt-3 pb-4 flex flex-col gap-2"
         style={{ borderTop: '1px dashed var(--fm-line-2)', fontFamily: 'var(--font-geist-mono)' }}
       >
         {/* Count + clear */}
-        <div
-          className="flex items-center justify-between"
-          style={{ fontSize: '1rem', color: 'var(--fm-ink-3)' }}
-        >
-          <span>{restaurantCount} 个钉</span>
+        <div className="flex items-center justify-between" style={{ fontSize: 11.5, color: 'var(--fm-ink-3)' }}>
+          <span>
+            {restaurantCount} 个餐厅
+            {hasFilters && <span style={{ color: 'var(--fm-orange)', marginLeft: 4 }}>（已筛选）</span>}
+          </span>
           {hasFilters && (
-            <button onClick={clearAll} style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer' }}>
+            <button
+              onClick={clearAll}
+              style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer', fontSize: 11.5 }}
+            >
               重置
             </button>
           )}
         </div>
 
-        {/* User section */}
+        {/* Auth */}
         {user ? (
           <div className="flex items-center gap-2">
             {user.user_metadata?.avatar_url ? (
@@ -293,25 +383,32 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
                 alt="avatar"
                 referrerPolicy="no-referrer"
                 className="rounded-full flex-shrink-0"
-                style={{ width: 32, height: 32, objectFit: 'cover' }}
+                style={{ width: 28, height: 28, objectFit: 'cover' }}
               />
             ) : (
               <div
                 className="flex items-center justify-center rounded-full flex-shrink-0"
-                style={{ width: 32, height: 32, background: 'var(--fm-green)', color: '#fbf8f1', fontSize: '1rem', fontWeight: 600 }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  background: 'var(--fm-green)',
+                  color: '#fbf8f1',
+                  fontSize: 11,
+                  fontWeight: 600,
+                }}
               >
                 {user.email?.slice(0, 2).toUpperCase()}
               </div>
             )}
             <span
               className="flex-1 truncate"
-              style={{ fontSize: '1rem', color: 'var(--fm-ink-3)' }}
+              style={{ fontSize: 11.5, color: 'var(--fm-ink-3)' }}
             >
               {user.email}
             </span>
             <button
               onClick={signOut}
-              style={{ fontSize: '1rem', color: 'var(--fm-ink-3)', cursor: 'pointer', flexShrink: 0 }}
+              style={{ fontSize: 11.5, color: 'var(--fm-ink-3)', cursor: 'pointer', flexShrink: 0 }}
             >
               退出
             </button>
@@ -319,13 +416,14 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
         ) : (
           <button
             onClick={signIn}
-            className="w-full py-1.5 rounded-md transition-colors"
+            className="w-full py-2 rounded-lg transition-colors"
             style={{
-              fontSize: '1rem',
+              fontSize: 12.5,
               color: 'var(--fm-ink-2)',
               background: 'var(--fm-muted)',
-              border: '1px solid var(--fm-line-2)',
+              border: '1.5px solid var(--fm-line-2)',
               cursor: 'pointer',
+              fontFamily: 'var(--font-geist-sans)',
             }}
           >
             登录编辑
@@ -336,20 +434,22 @@ export default function FilterPanel({ allTags, filters, onChange, restaurantCoun
   )
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+// ── FilterLabel helper ────────────────────────────────────────────────────────
+function FilterLabel({
+  children,
+  count = 0,
+  countLabel,
+}: {
+  children: React.ReactNode
+  count?: number
+  countLabel?: string
+}) {
   return (
-    <p
-      className="mb-2"
-      style={{
-        fontFamily: 'var(--font-geist-mono)',
-        fontSize: '1rem',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: 'var(--fm-ink-3)',
-        fontWeight: 600,
-      }}
-    >
+    <p className="fm-filter-label">
       {children}
+      {count > 0 && (
+        <span className="fm-filter-label-count">{countLabel ?? count}</span>
+      )}
     </p>
   )
 }

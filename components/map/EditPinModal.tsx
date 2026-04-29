@@ -39,7 +39,7 @@ export default function EditPinModal({ restaurant, onClose, onSaved }: Props) {
     fetch('/api/tags').then((r) => r.json()).then(setAllTags)
   }, [])
 
-  function handleCostSlider(values: number[]) {
+  function handleCostSlider(values: number | readonly number[]) {
     setCostRange(values as [number, number])
   }
 
