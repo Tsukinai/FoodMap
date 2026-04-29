@@ -9,6 +9,9 @@ import {
   CUISINE_BG,
   PRESET_TASTE_TAGS,
   PRESET_SCENE_TAGS,
+  PRESET_CUISINE_TAGS,
+  CHINESE_SUB_CUISINES,
+  PRESET_DISH_TYPE_TAGS,
 } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import SmartSearchBar from './SmartSearchBar'
@@ -20,7 +23,6 @@ interface Props {
   onChange: (filters: FilterPayload) => void
   restaurantCount: number
   user: User | null
-  onAddPin?: () => void
   isOwner: boolean
   onCollapse?: () => void
 }
@@ -33,7 +35,6 @@ export default function FilterPanel({
   onChange,
   restaurantCount,
   user,
-  onAddPin,
   isOwner,
   onCollapse,
 }: Props) {
@@ -52,9 +53,20 @@ export default function FilterPanel({
   }
 
   // ── Tag helpers ──────────────────────────────────────────────────────────
-  const cuisineTags   = allTags.filter((t) => t.type === 'cuisine')
   const tasteTags     = allTags.filter((t) => t.type === 'taste')
   const sceneTags     = allTags.filter((t) => t.type === 'scene')
+
+  // Cuisine: always show preset top-level + sub-cuisines; append any extra DB tags
+  const dbCuisineNames = allTags.filter((t) => t.type === 'cuisine').map((t) => t.name)
+  const extraCuisineNames = dbCuisineNames.filter(
+    (n) => !PRESET_CUISINE_TAGS.includes(n) && !CHINESE_SUB_CUISINES.includes(n)
+  )
+  const displayCuisineNames = [...PRESET_CUISINE_TAGS, ...extraCuisineNames]
+
+  // Dish type (种类): always show presets; append any extra DB dish tags
+  const dbDishNames = allTags.filter((t) => t.type === 'dish').map((t) => t.name)
+  const extraDishNames = dbDishNames.filter((n) => !PRESET_DISH_TYPE_TAGS.includes(n))
+  const displayDishTypeNames = [...PRESET_DISH_TYPE_TAGS, ...extraDishNames]
 
   const displayTasteTags = tasteTags.length > 0
     ? tasteTags
@@ -68,6 +80,26 @@ export default function FilterPanel({
   function toggleArr(key: keyof FilterPayload, name: string) {
     const arr = (filters[key] as string[]) ?? []
     onChange({ ...filters, [key]: arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name] })
+  }
+
+  function toggleCuisine(name: string) {
+    const current = filters.cuisine_tags
+    if (CHINESE_SUB_CUISINES.includes(name)) {
+      if (current.includes(name)) {
+        onChange({ ...filters, cuisine_tags: current.filter((n) => n !== name) })
+      } else {
+        const next = current.includes('中餐') ? [...current, name] : [...current, name, '中餐']
+        onChange({ ...filters, cuisine_tags: next })
+      }
+    } else if (name === '中餐') {
+      if (current.includes('中餐')) {
+        onChange({ ...filters, cuisine_tags: current.filter((n) => n !== '中餐' && !CHINESE_SUB_CUISINES.includes(n)) })
+      } else {
+        onChange({ ...filters, cuisine_tags: [...current, '中餐'] })
+      }
+    } else {
+      toggleArr('cuisine_tags', name)
+    }
   }
 
   function toggleRegion(region: string) {
@@ -153,26 +185,6 @@ export default function FilterPanel({
           </div>
 
           <div className="flex items-center gap-2">
-          {isOwner && onAddPin && (
-            <button
-              onClick={onAddPin}
-              style={{
-                padding: '6px 13px',
-                borderRadius: 8,
-                fontSize: 12.5,
-                fontWeight: 600,
-                background: 'var(--fm-orange)',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-geist-sans)',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(217,107,44,0.25)',
-              }}
-            >
-              ＋ 打地图钉
-            </button>
-          )}
           {onCollapse && (
             <button
               onClick={onCollapse}
@@ -245,38 +257,85 @@ export default function FilterPanel({
         </section>
 
         {/* ── Cuisine ── */}
-        {cuisineTags.length > 0 && (
-          <section>
-            <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {cuisineTags.map((t) => {
-                const active = filters.cuisine_tags.includes(t.name)
-                const fg = CUISINE_COLORS[t.name] ?? 'var(--fm-ink-2)'
-                const bg = CUISINE_BG[t.name]     ?? 'var(--fm-muted)'
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => toggleArr('cuisine_tags', t.name)}
-                    style={{
-                      padding: '5px 10px',
-                      borderRadius: 8,
-                      fontSize: 12.5,
-                      fontWeight: 500,
-                      fontFamily: 'var(--font-geist-sans)',
-                      background: active ? fg : bg,
-                      color: active ? '#fff' : fg,
-                      border: `1.5px solid ${active ? fg : 'transparent'}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    {t.name}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-        )}
+        <section>
+          <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {displayCuisineNames.map((name) => {
+              const active = filters.cuisine_tags.includes(name)
+              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
+              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
+              return (
+                <button
+                  key={name}
+                  onClick={() => toggleCuisine(name)}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    background: active ? fg : bg,
+                    color: active ? '#fff' : fg,
+                    border: `1.5px solid ${active ? fg : 'transparent'}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+          {/* Chinese sub-cuisines */}
+          <div style={{ marginTop: 6, paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {CHINESE_SUB_CUISINES.map((name) => {
+              const active = filters.cuisine_tags.includes(name)
+              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
+              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
+              return (
+                <button
+                  key={name}
+                  onClick={() => toggleCuisine(name)}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 6,
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    background: active ? fg : bg,
+                    color: active ? '#fff' : fg,
+                    border: `1.5px solid ${active ? fg : 'transparent'}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                    opacity: filters.cuisine_tags.includes('中餐') || active ? 1 : 0.55,
+                  }}
+                >
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── Dish type (种类) ── */}
+        <section>
+          <FilterLabel count={filters.dish_tags.length}>种类</FilterLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {displayDishTypeNames.map((name) => {
+              const active = filters.dish_tags.includes(name)
+              return (
+                <button
+                  key={name}
+                  onClick={() => toggleArr('dish_tags', name)}
+                  className={`fm-chip${active ? ' active' : ''}`}
+                  style={{ fontSize: 12 }}
+                >
+                  {name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
 
         {/* ── Cost range ── */}
         <section>

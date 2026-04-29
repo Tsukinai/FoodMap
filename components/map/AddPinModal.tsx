@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Tag } from '@/lib/types'
-import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS } from '@/lib/constants'
+import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS, PRESET_CUISINE_TAGS, CHINESE_SUB_CUISINES, PRESET_DISH_TYPE_TAGS } from '@/lib/constants'
 import TagInput from '@/components/tags/TagInput'
 import { Slider } from '@/components/ui/slider'
 
@@ -197,17 +197,24 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
               selectedIds={cuisineTagIds}
               onChange={setCuisineTagIds}
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
+              onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
+              canManage
+              presets={PRESET_CUISINE_TAGS}
+              subPresets={CHINESE_SUB_CUISINES}
             />
           </FormSection>
 
           {/* Dish tags */}
-          <FormSection label="招牌菜品">
+          <FormSection label="种类 / 菜品">
             <TagInput
               type="dish"
               allTags={allTags}
               selectedIds={dishTagIds}
               onChange={setDishTagIds}
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
+              onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
+              canManage
+              presets={PRESET_DISH_TYPE_TAGS}
             />
           </FormSection>
 

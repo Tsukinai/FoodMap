@@ -110,7 +110,6 @@ export default function HomePage() {
           restaurantCount={allRestaurants.length}
           user={user}
           isOwner={isOwner}
-          onAddPin={() => setAddingPin(true)}
           onCollapse={() => setSidebarOpen(false)}
         />
       </div>

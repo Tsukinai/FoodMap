@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Tag, Restaurant } from '@/lib/types'
+import { PRESET_CUISINE_TAGS, CHINESE_SUB_CUISINES, PRESET_DISH_TYPE_TAGS } from '@/lib/constants'
 import TagInput from '@/components/tags/TagInput'
 import { Slider } from '@/components/ui/slider'
 
@@ -132,12 +133,12 @@ export default function EditPinModal({ restaurant, onClose, onSaved }: Props) {
 
           {/* Cuisine */}
           <FormSection label="菜系">
-            <TagInput type="cuisine" allTags={allTags} selectedIds={cuisineTagIds} onChange={setCuisineTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} />
+            <TagInput type="cuisine" allTags={allTags} selectedIds={cuisineTagIds} onChange={setCuisineTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))} canManage presets={PRESET_CUISINE_TAGS} subPresets={CHINESE_SUB_CUISINES} />
           </FormSection>
 
           {/* Dish */}
-          <FormSection label="招牌菜品">
-            <TagInput type="dish" allTags={allTags} selectedIds={dishTagIds} onChange={setDishTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} />
+          <FormSection label="种类 / 菜品">
+            <TagInput type="dish" allTags={allTags} selectedIds={dishTagIds} onChange={setDishTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))} canManage presets={PRESET_DISH_TYPE_TAGS} />
           </FormSection>
 
           {/* Taste */}

@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
-import Map, { Marker, NavigationControl, type MapRef } from 'react-map-gl/maplibre'
+import { useRef, useState, useEffect } from 'react'
+import Map, { NavigationControl, type MapRef } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/constants'
 import type { Restaurant, FilterPayload } from '@/lib/types'
@@ -51,14 +51,12 @@ export default function MapContainer({
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null)
   const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
 
-  const handleMapClick = useCallback(
-    (e: maplibregl.MapMouseEvent) => {
-      if (!isOwner || !addingPin) return
-      setAddPinCoords({ lng: e.lngLat.lng, lat: e.lngLat.lat })
+  useEffect(() => {
+    if (addingPin) {
+      setAddPinCoords({ lng: SINGAPORE_CENTER.lng, lat: SINGAPORE_CENTER.lat })
       onAddingPinChange(false)
-    },
-    [isOwner, addingPin, onAddingPinChange],
-  )
+    }
+  }, [addingPin, onAddingPinChange])
 
   return (
     <div className="relative w-full h-full">
@@ -71,8 +69,7 @@ export default function MapContainer({
         }}
         maxBounds={SINGAPORE_BOUNDS}
         mapStyle={MAP_STYLE}
-        onClick={handleMapClick}
-        cursor={addingPin ? 'crosshair' : 'grab'}
+        cursor="grab"
       >
         <NavigationControl position="bottom-right" />
 
@@ -91,14 +88,6 @@ export default function MapContainer({
           />
         ))}
 
-        {addPinCoords && (
-          <Marker longitude={addPinCoords.lng} latitude={addPinCoords.lat}>
-            <div
-              className="rounded-full border-2 border-white shadow-lg animate-pulse"
-              style={{ width: 20, height: 20, background: 'var(--fm-orange)' }}
-            />
-          </Marker>
-        )}
       </Map>
 
       {/* Top-right owner controls */}
@@ -108,16 +97,16 @@ export default function MapContainer({
           style={{ zIndex: 10 }}
         >
           <button
-            onClick={() => onAddingPinChange(!addingPin)}
+            onClick={() => onAddingPinChange(true)}
             className="flex items-center gap-1.5 text-sm font-medium rounded-xl px-4 py-2 shadow-md transition-colors"
             style={{
               fontFamily: 'var(--font-geist-sans)',
-              background: addingPin ? '#a43d1f' : 'var(--fm-orange)',
+              background: 'var(--fm-orange)',
               color: '#fff',
               boxShadow: '0 4px 10px rgba(217,107,44,0.3)',
             }}
           >
-            {addingPin ? '取消' : '＋ 打地图钉'}
+            ＋ 打地图钉
           </button>
         </div>
       )}

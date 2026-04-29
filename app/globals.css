@@ -71,21 +71,6 @@
 :root {
   /* FoodMap warm cream palette */
   --background: #f5f1e8;
-  /* FoodMap design tokens — used as var(--fm-*) throughout components */
-  --fm-orange: #d96b2c;
-  --fm-orange-dark: #a43d1f;
-  --fm-green: #3f5a3d;
-  --fm-gold: #c89233;
-  --fm-plum: #7a3a4a;
-  --fm-ink: #1f1c18;
-  --fm-ink-2: #3b3630;
-  --fm-ink-3: #6b635a;
-  --fm-ink-4: #a39a8d;
-  --fm-line: #e6dfd0;
-  --fm-line-2: #d8cfbb;
-  --fm-cream: #f5f1e8;
-  --fm-paper: #fbf8f1;
-  --fm-muted: #ece5d2;
   --foreground: #1f1c18;
   --card: #fbf8f1;
   --card-foreground: #1f1c18;
@@ -120,6 +105,22 @@
 }
 
 @layer base {
+  :root {
+    --fm-orange: #d96b2c;
+    --fm-orange-dark: #a43d1f;
+    --fm-green: #3f5a3d;
+    --fm-gold: #c89233;
+    --fm-plum: #7a3a4a;
+    --fm-ink: #1f1c18;
+    --fm-ink-2: #3b3630;
+    --fm-ink-3: #6b635a;
+    --fm-ink-4: #a39a8d;
+    --fm-line: #e6dfd0;
+    --fm-line-2: #d8cfbb;
+    --fm-cream: #f5f1e8;
+    --fm-paper: #fbf8f1;
+    --fm-muted: #ece5d2;
+  }
   * {
     @apply border-border outline-ring/50;
   }

@@ -41,14 +41,23 @@ export const CUISINE_COLORS: Record<string, string> = {
   '越南': '#d35400',
   '海鲜': '#1a6b8a',
   '素食': '#52b788',
-  // Legacy names kept for backward compatibility
+  // Preset cuisine tags
   '中餐':   '#c0392b',
-  '日料':   '#2980b9',
+  '东南亚菜': '#1e7e5a',
   '韩餐':   '#8e44ad',
+  '日料':   '#2980b9',
+  '泰餐':   '#16a085',
+  '西餐':   '#2c3e50',
+  '甜品':   '#c2359b',
+  // Chinese sub-cuisines
+  '粤菜':   '#a03020',
+  '川菜':   '#cc3311',
+  '云南菜': '#7a4e20',
+  '湘菜':   '#8b1c1c',
+  '新疆菜': '#8c6620',
+  // Legacy names
   '印度菜': '#e67e22',
   '马来菜': '#27ae60',
-  '西餐':   '#2c3e50',
-  '泰餐':   '#16a085',
   '越南菜': '#d35400',
   '本地菜': '#f4a261',
 }
@@ -71,17 +80,30 @@ export const CUISINE_BG: Record<string, string> = {
   '越南': '#fdf0e6',
   '海鲜': '#e3f2f9',
   '素食': '#edf7f0',
-  // Legacy names kept for backward compatibility
+  // Preset cuisine tags
   '中餐':   '#fdecea',
-  '日料':   '#e8f4fd',
+  '东南亚菜': '#e3f2ed',
   '韩餐':   '#f5eefb',
+  '日料':   '#e8f4fd',
+  '泰餐':   '#e8f8f5',
+  '西餐':   '#eaecee',
+  '甜品':   '#fce4f4',
+  // Chinese sub-cuisines
+  '粤菜':   '#faeae5',
+  '川菜':   '#fde8e4',
+  '云南菜': '#f5ede0',
+  '湘菜':   '#f9e5e5',
+  '新疆菜': '#f7f0e0',
+  // Legacy names
   '印度菜': '#fef5e7',
   '马来菜': '#eafaf1',
-  '西餐':   '#eaecee',
-  '泰餐':   '#e8f8f5',
   '越南菜': '#fdf0e6',
   '本地菜': '#fff8f0',
 }
 
-export const PRESET_TASTE_TAGS = ['清淡', '不辣', '微辣', '特辣', '偏甜', '偏酸']
-export const PRESET_SCENE_TAGS = ['早餐', 'brunch', '正餐', '夜宵', '约会', '家庭', '商务']
+export const PRESET_TASTE_TAGS = ['不辣', '微辣', '特辣']
+export const PRESET_SCENE_TAGS = ['早餐', 'brunch', '正餐', '夜宵', '下午茶/甜点']
+
+export const PRESET_CUISINE_TAGS = ['中餐', '东南亚菜', '韩餐', '日料', '泰餐', '西餐', '甜品']
+export const CHINESE_SUB_CUISINES = ['粤菜', '川菜', '云南菜', '湘菜', '新疆菜']
+export const PRESET_DISH_TYPE_TAGS = ['炸鸡汉堡', '烧烤', '烤肉', '披萨', '炒菜', '漂亮饭']
