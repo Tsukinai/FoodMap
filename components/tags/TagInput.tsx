@@ -14,6 +14,7 @@ interface Props {
   canManage?: boolean
   presets?: string[]
   subPresets?: string[]
+  subPresetsParent?: string
 }
 
 const TYPE_LABELS: Record<TagType, string> = {
@@ -40,6 +41,7 @@ export default function TagInput({
   canManage,
   presets,
   subPresets,
+  subPresetsParent,
 }: Props) {
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
@@ -69,23 +71,37 @@ export default function TagInput({
     return tag ? selectedIds.includes(tag.id) : false
   }
 
-  async function togglePreset(name: string) {
+  async function ensureTag(name: string): Promise<Tag> {
     const existing = allTags.find((t) => t.type === type && t.name === name)
-    if (existing) {
-      toggle(existing.id)
+    if (existing) return existing
+    const res = await fetch('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, type }),
+    })
+    const tag: Tag = await res.json()
+    onTagCreated(tag)
+    return tag
+  }
+
+  async function togglePreset(name: string, isSubPreset = false) {
+    const existing = allTags.find((t) => t.type === type && t.name === name)
+    if (existing && selectedIds.includes(existing.id)) {
+      onChange(selectedIds.filter((i) => i !== existing.id))
       return
     }
     if (creating) return
     setCreating(true)
     try {
-      const res = await fetch('/api/tags', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, type }),
-      })
-      const tag: Tag = await res.json()
-      onTagCreated(tag)
-      onChange([...selectedIds, tag.id])
+      const tag = await ensureTag(name)
+      let newIds = selectedIds.includes(tag.id) ? selectedIds : [...selectedIds, tag.id]
+
+      if (isSubPreset && subPresetsParent) {
+        const parentTag = await ensureTag(subPresetsParent)
+        if (!newIds.includes(parentTag.id)) newIds = [...newIds, parentTag.id]
+      }
+
+      onChange(newIds)
     } finally {
       setCreating(false)
     }
@@ -165,7 +181,7 @@ export default function TagInput({
             return (
               <button
                 key={name}
-                onClick={() => togglePreset(name)}
+                onClick={() => togglePreset(name, true)}
                 className={`fm-chip${active ? ' active' : ''}`}
                 style={{ fontSize: 12.5 }}
               >
@@ -187,7 +203,7 @@ export default function TagInput({
               return (
                 <button
                   key={name}
-                  onClick={() => togglePreset(name)}
+                  onClick={() => togglePreset(name, true)}
                   style={{
                     padding: '3px 8px',
                     borderRadius: 6,

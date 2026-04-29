@@ -34,6 +34,7 @@ export default function EditPinModal({ restaurant, onClose, onSaved }: Props) {
   const [sceneTagIds, setSceneTagIds] = useState<string[]>(
     restaurant.tags.filter((t) => t.type === 'scene').map((t) => t.id)
   )
+  const [signatureDishes, setSignatureDishes] = useState<string[]>(restaurant.signature_dishes ?? [])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function EditPinModal({ restaurant, onClose, onSaved }: Props) {
         body: JSON.stringify({
           name: name.trim(),
           notes: notes || null,
+          signature_dishes: signatureDishes,
           cost_min: costRange[0] === 0 ? null : costRange[0],
           cost_max: costRange[1] === MAX_COST ? null : costRange[1],
           cuisine_tag_ids: cuisineTagIds,
@@ -133,7 +135,12 @@ export default function EditPinModal({ restaurant, onClose, onSaved }: Props) {
 
           {/* Cuisine */}
           <FormSection label="菜系">
-            <TagInput type="cuisine" allTags={allTags} selectedIds={cuisineTagIds} onChange={setCuisineTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))} canManage presets={PRESET_CUISINE_TAGS} subPresets={CHINESE_SUB_CUISINES} />
+            <TagInput type="cuisine" allTags={allTags} selectedIds={cuisineTagIds} onChange={setCuisineTagIds} onTagCreated={(t) => setAllTags((prev) => [...prev, t])} onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))} canManage presets={PRESET_CUISINE_TAGS} subPresets={CHINESE_SUB_CUISINES} subPresetsParent="中餐" />
+          </FormSection>
+
+          {/* Signature dishes */}
+          <FormSection label="招牌菜">
+            <SignatureDishInput dishes={signatureDishes} onChange={setSignatureDishes} />
           </FormSection>
 
           {/* Dish */}
@@ -270,6 +277,72 @@ function CostInput({ value, onChange, placeholder }: {
       onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
       onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
     />
+  )
+}
+
+function SignatureDishInput({ dishes, onChange }: { dishes: string[]; onChange: (d: string[]) => void }) {
+  const [input, setInput] = useState('')
+
+  function add() {
+    const name = input.trim()
+    if (!name || dishes.includes(name)) return
+    onChange([...dishes, name])
+    setInput('')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {dishes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {dishes.map((d) => (
+            <button
+              key={d}
+              onClick={() => onChange(dishes.filter((x) => x !== d))}
+              className="fm-tag fm-tag-dish"
+              style={{ cursor: 'pointer' }}
+            >
+              {d} <span style={{ opacity: 0.6 }}>✕</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder="输入招牌菜名，Enter 添加…"
+          style={{
+            flex: 1,
+            background: 'var(--fm-paper)',
+            border: '1px solid var(--fm-line-2)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: '1rem',
+            fontFamily: 'var(--font-geist-sans)',
+            color: 'var(--fm-ink)',
+            outline: 'none',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+        />
+        <button
+          onClick={add}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            fontSize: 13,
+            fontFamily: 'var(--font-geist-sans)',
+            background: 'var(--fm-muted)',
+            border: '1px solid var(--fm-line-2)',
+            color: 'var(--fm-ink-2)',
+            cursor: 'pointer',
+          }}
+        >
+          添加
+        </button>
+      </div>
+    </div>
   )
 }
 

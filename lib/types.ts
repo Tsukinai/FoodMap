@@ -17,6 +17,7 @@ export interface Restaurant {
   cost_min: number | null
   cost_max: number | null
   notes: string | null
+  signature_dishes: string[]
   created_at: string
   updated_at: string
   tags: Tag[]
@@ -31,6 +32,7 @@ export interface RestaurantFormData {
   cost_min: number | null
   cost_max: number | null
   notes: string
+  signature_dishes: string[]
   cuisine_tag_ids: string[]
   dish_tag_ids: string[]
   taste_tag_ids: string[]

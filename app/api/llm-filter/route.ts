@@ -43,7 +43,7 @@ const filterSchema = {
           type: 'array',
           items: {
             type: 'string',
-            enum: ['中部', '东部', '西部', '北部', '东北部', 'CBD/滨海湾', '牛车水', '小印度', '甘榜格南'],
+            enum: ['中部', '东部', '西部', '北部', '东北部'],
           },
           description: 'Singapore regions to filter by. Empty array means all regions.',
         },
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 可用菜品标签：${dishTags.map((t) => `"${t.name}"`).join('、') || '暂无'}
 可用口味标签：${tasteTags.map((t) => `"${t.name}"`).join('、') || '辣、清淡、甜、咸鲜、酸、鲜香、浓郁、爽口、烟熏'}
 
-新加坡区域：中部、东部、西部、北部、东北部、CBD/滨海湾、牛车水、小印度、甘榜格南
+新加坡区域：中部、东部、西部、北部、东北部
 预算参考："便宜"≈ S$15以下，"中等"≈ S$15–40，"贵"≈ S$40以上。
 只使用以上列表中的标签名，不要自造标签。
 必须调用 apply_filter，即使查询模糊（未约束字段用空数组）。`

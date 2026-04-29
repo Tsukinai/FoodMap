@@ -4,7 +4,6 @@ import { useState } from 'react'
 import type { Tag, FilterPayload } from '@/lib/types'
 import {
   BROAD_REGIONS,
-  HOOD_REGIONS,
   CUISINE_COLORS,
   CUISINE_BG,
   PRESET_TASTE_TAGS,
@@ -80,26 +79,6 @@ export default function FilterPanel({
   function toggleArr(key: keyof FilterPayload, name: string) {
     const arr = (filters[key] as string[]) ?? []
     onChange({ ...filters, [key]: arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name] })
-  }
-
-  function toggleCuisine(name: string) {
-    const current = filters.cuisine_tags
-    if (CHINESE_SUB_CUISINES.includes(name)) {
-      if (current.includes(name)) {
-        onChange({ ...filters, cuisine_tags: current.filter((n) => n !== name) })
-      } else {
-        const next = current.includes('中餐') ? [...current, name] : [...current, name, '中餐']
-        onChange({ ...filters, cuisine_tags: next })
-      }
-    } else if (name === '中餐') {
-      if (current.includes('中餐')) {
-        onChange({ ...filters, cuisine_tags: current.filter((n) => n !== '中餐' && !CHINESE_SUB_CUISINES.includes(n)) })
-      } else {
-        onChange({ ...filters, cuisine_tags: [...current, '中餐'] })
-      }
-    } else {
-      toggleArr('cuisine_tags', name)
-    }
   }
 
   function toggleRegion(region: string) {
@@ -224,30 +203,12 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.regions.length}>区域</FilterLabel>
 
-          {/* Broad regions: 3-column grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, marginBottom: 5 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
             {BROAD_REGIONS.map((r) => (
               <button
                 key={r}
                 className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
                 style={{ fontSize: 12, padding: '6px 4px' }}
-                onClick={() => toggleRegion(r)}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-
-          {/* Thin divider */}
-          <div style={{ height: 1, background: 'var(--fm-line)', margin: '4px 0 6px' }} />
-
-          {/* Neighbourhoods: 2-column grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 5 }}>
-            {HOOD_REGIONS.map((r) => (
-              <button
-                key={r}
-                className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
-                style={{ fontSize: 11.5, padding: '6px 4px' }}
                 onClick={() => toggleRegion(r)}
               >
                 {r}
@@ -267,7 +228,7 @@ export default function FilterPanel({
               return (
                 <button
                   key={name}
-                  onClick={() => toggleCuisine(name)}
+                  onClick={() => toggleArr('cuisine_tags', name)}
                   style={{
                     padding: '5px 10px',
                     borderRadius: 8,
@@ -295,7 +256,7 @@ export default function FilterPanel({
               return (
                 <button
                   key={name}
-                  onClick={() => toggleCuisine(name)}
+                  onClick={() => toggleArr('cuisine_tags', name)}
                   style={{
                     padding: '3px 8px',
                     borderRadius: 6,
@@ -307,7 +268,6 @@ export default function FilterPanel({
                     border: `1.5px solid ${active ? fg : 'transparent'}`,
                     cursor: 'pointer',
                     transition: 'all 0.12s',
-                    opacity: filters.cuisine_tags.includes('中餐') || active ? 1 : 0.55,
                   }}
                 >
                   {name}

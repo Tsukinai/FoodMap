@@ -169,8 +169,30 @@ export default function PinMarker({ restaurant, isOwner, isSelected, onClick, on
                 </div>
               )}
 
+              {/* Signature dishes */}
+              {restaurant.signature_dishes?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                  {restaurant.signature_dishes.map((d) => (
+                    <span
+                      key={d}
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 6,
+                        fontSize: 11.5,
+                        fontFamily: 'var(--font-geist-mono)',
+                        background: 'var(--fm-cream)',
+                        color: 'var(--fm-ink-2)',
+                        border: '1px solid var(--fm-line)',
+                      }}
+                    >
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {/* Tags */}
-              {(cuisineTags.length > 0 || dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
+              {(dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
                   {dishTags.map((t) => (
                     <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>

@@ -7,7 +7,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params
   const body = await request.json()
-  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
+  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
 
   const supabase = await createClient()
 
@@ -19,6 +19,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (cost_min !== undefined) updates.cost_min = cost_min
   if (cost_max !== undefined) updates.cost_max = cost_max
   if (notes !== undefined) updates.notes = notes
+  if (signature_dishes !== undefined) updates.signature_dishes = signature_dishes
 
   const { error } = await supabase.from('restaurants').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

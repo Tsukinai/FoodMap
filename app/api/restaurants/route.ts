@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, name, address, postal_code,
       location,
-      cost_min, cost_max, notes, created_at, updated_at,
+      cost_min, cost_max, notes, signature_dishes, created_at, updated_at,
       restaurant_tags (
         tags ( id, name, type )
       )
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       location_lng: geo?.coordinates[0] ?? null,
       location_lat: geo?.coordinates[1] ?? null,
       location: undefined,
+      signature_dishes: r.signature_dishes ?? [],
       tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
       restaurant_tags: undefined,
     }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
+  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
 
   // #region agent log
   fetch('http://127.0.0.1:7785/ingest/06f7814b-35b6-4caa-a074-dc046863fac3', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'bed6da' }, body: JSON.stringify({ sessionId: 'bed6da', runId: 'initial', hypothesisId: 'H3,H4', location: 'app/api/restaurants/route.ts:107', message: 'restaurants POST coordinate payload', data: { hasName: Boolean(name), hasAddress: Boolean(address), hasPostalCode: Boolean(postal_code), lng, lat, lngType: typeof lng, latType: typeof lat, lngIsFinite: Number.isFinite(lng), latIsFinite: Number.isFinite(lat), pointText: `POINT(${lng} ${lat})` }, timestamp: Date.now() }) }).catch(() => {})
@@ -127,6 +128,7 @@ export async function POST(request: NextRequest) {
       cost_min: cost_min || null,
       cost_max: cost_max || null,
       notes: notes || null,
+      signature_dishes: signature_dishes ?? [],
     })
     .select('id')
     .single()

@@ -21,6 +21,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
   const [postalCode, setPostalCode] = useState('')
   const [costRange, setCostRange] = useState<[number, number]>([0, MAX_COST])
   const [notes, setNotes] = useState('')
+  const [signatureDishes, setSignatureDishes] = useState<string[]>([])
   const [cuisineTagIds, setCuisineTagIds] = useState<string[]>([])
   const [dishTagIds, setDishTagIds] = useState<string[]>([])
   const [tasteTagIds, setTasteTagIds] = useState<string[]>([])
@@ -81,6 +82,7 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
           cost_min: costRange[0] === 0 ? null : costRange[0],
           cost_max: costRange[1] === MAX_COST ? null : costRange[1],
           notes: notes || null,
+          signature_dishes: signatureDishes,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
           taste_tag_ids: tasteTagIds,
@@ -201,7 +203,13 @@ export default function AddPinModal({ lng, lat, onClose, onSaved }: Props) {
               canManage
               presets={PRESET_CUISINE_TAGS}
               subPresets={CHINESE_SUB_CUISINES}
+              subPresetsParent="中餐"
             />
+          </FormSection>
+
+          {/* Signature dishes */}
+          <FormSection label="招牌菜">
+            <SignatureDishInput dishes={signatureDishes} onChange={setSignatureDishes} />
           </FormSection>
 
           {/* Dish tags */}
@@ -403,6 +411,72 @@ function FmInput({ value, onChange, onKeyDown, placeholder }: {
       onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
       onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
     />
+  )
+}
+
+function SignatureDishInput({ dishes, onChange }: { dishes: string[]; onChange: (d: string[]) => void }) {
+  const [input, setInput] = useState('')
+
+  function add() {
+    const name = input.trim()
+    if (!name || dishes.includes(name)) return
+    onChange([...dishes, name])
+    setInput('')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {dishes.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {dishes.map((d) => (
+            <button
+              key={d}
+              onClick={() => onChange(dishes.filter((x) => x !== d))}
+              className="fm-tag fm-tag-dish"
+              style={{ cursor: 'pointer' }}
+            >
+              {d} <span style={{ opacity: 0.6 }}>✕</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder="输入招牌菜名，Enter 添加…"
+          style={{
+            flex: 1,
+            background: 'var(--fm-paper)',
+            border: '1px solid var(--fm-line-2)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: '1rem',
+            fontFamily: 'var(--font-geist-sans)',
+            color: 'var(--fm-ink)',
+            outline: 'none',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+        />
+        <button
+          onClick={add}
+          style={{
+            padding: '8px 14px',
+            borderRadius: 8,
+            fontSize: 13,
+            fontFamily: 'var(--font-geist-sans)',
+            background: 'var(--fm-muted)',
+            border: '1px solid var(--fm-line-2)',
+            color: 'var(--fm-ink-2)',
+            cursor: 'pointer',
+          }}
+        >
+          添加
+        </button>
+      </div>
+    </div>
   )
 }
 
