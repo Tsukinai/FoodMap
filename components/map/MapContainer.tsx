@@ -7,27 +7,37 @@ import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/consta
 import type { Restaurant, FilterPayload } from '@/lib/types'
 import PinMarker from './PinMarker'
 
-const PIXEL_SCATTER_RADIUS = 30
+const SPIDERFY_RADIUS = 30
 
-function computeOffsets(restaurants: Restaurant[]): Record<string, [number, number]> {
+interface PinGroupInfo {
+  groupKey: string
+  groupSize: number
+  pixelOffset: [number, number]
+}
+
+function computeGroupInfo(
+  restaurants: Restaurant[],
+  spiderfiedKey: string | null
+): Record<string, PinGroupInfo> {
   const groups: Record<string, Restaurant[]> = {}
   for (const r of restaurants) {
     const key = `${r.location_lng},${r.location_lat}`
     if (!groups[key]) groups[key] = []
     groups[key].push(r)
   }
-  const result: Record<string, [number, number]> = {}
-  for (const group of Object.values(groups)) {
+  const result: Record<string, PinGroupInfo> = {}
+  for (const [key, group] of Object.entries(groups)) {
+    const expanded = spiderfiedKey === key && group.length > 1
     group.forEach((r, i) => {
-      if (group.length === 1) {
-        result[r.id] = [0, 0]
-      } else {
+      let pixelOffset: [number, number] = [0, 0]
+      if (expanded) {
         const angle = (i / group.length) * 2 * Math.PI - Math.PI / 2
-        result[r.id] = [
-          Math.round(PIXEL_SCATTER_RADIUS * Math.cos(angle)),
-          Math.round(PIXEL_SCATTER_RADIUS * Math.sin(angle)),
+        pixelOffset = [
+          Math.round(SPIDERFY_RADIUS * Math.cos(angle)),
+          Math.round(SPIDERFY_RADIUS * Math.sin(angle)),
         ]
       }
+      result[r.id] = { groupKey: key, groupSize: group.length, pixelOffset }
     })
   }
   return result
@@ -77,6 +87,7 @@ export default function MapContainer({
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null)
   const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const [spiderfiedKey, setSpiderfiedKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (addingPin) {
@@ -85,7 +96,22 @@ export default function MapContainer({
     }
   }, [addingPin, onAddingPinChange])
 
-  const pixelOffsets = computeOffsets(restaurants)
+  const groupInfo = computeGroupInfo(restaurants, spiderfiedKey)
+
+  function handlePinClick(r: Restaurant) {
+    const { groupKey, groupSize } = groupInfo[r.id]
+    if (groupSize > 1 && spiderfiedKey !== groupKey) {
+      setSpiderfiedKey(groupKey)
+      setSelectedRestaurant(null)
+    } else {
+      setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)
+    }
+  }
+
+  function handleMapClick() {
+    setSpiderfiedKey(null)
+    setSelectedRestaurant(null)
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -99,10 +125,13 @@ export default function MapContainer({
         maxBounds={SINGAPORE_BOUNDS}
         mapStyle={MAP_STYLE}
         cursor="grab"
+        onClick={handleMapClick}
       >
         <NavigationControl position="bottom-right" />
 
         {restaurants.map((r) => {
+          const { groupSize, groupKey, pixelOffset } = groupInfo[r.id]
+          const isExpanded = spiderfiedKey === groupKey
           return (
             <PinMarker
               key={r.id}
@@ -110,13 +139,14 @@ export default function MapContainer({
               isOwner={isOwner}
               editMode={editMode}
               isSelected={selectedRestaurant?.id === r.id}
-              onClick={() => setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)}
+              onClick={() => handlePinClick(r)}
               onRefresh={onRestaurantSaved}
               onEdit={() => {
                 setSelectedRestaurant(null)
                 setEditRestaurant(r)
               }}
-              pixelOffset={pixelOffsets[r.id]}
+              pixelOffset={pixelOffset}
+              stackCount={!isExpanded && groupSize > 1 ? groupSize : undefined}
             />
           )
         })}

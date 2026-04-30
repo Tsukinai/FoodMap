@@ -14,9 +14,10 @@ interface Props {
   onRefresh: () => void
   onEdit: () => void
   pixelOffset?: [number, number]
+  stackCount?: number
 }
 
-export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit, pixelOffset }: Props) {
+export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit, pixelOffset, stackCount }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -58,9 +59,33 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
           onClick()
         }}
       >
-        {/* Pin SVG — 24×32, colour-coded by cuisine */}
+        <div className="relative cursor-pointer">
+        {stackCount && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -5,
+              right: -7,
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: 'var(--fm-ink)',
+              color: 'var(--fm-paper)',
+              fontSize: 9,
+              fontFamily: 'var(--font-geist-mono)',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+              pointerEvents: 'none',
+            }}
+          >
+            {stackCount}
+          </div>
+        )}
         <div
-          className="cursor-pointer transition-transform"
+          className="transition-transform"
           style={{
             transform: isSelected ? 'scale(1.25) translateY(-2px)' : 'scale(1)',
             filter: isSelected
@@ -87,6 +112,7 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
               <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
             </svg>
           )}
+        </div>
         </div>
       </Marker>
 

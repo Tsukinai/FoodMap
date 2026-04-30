@@ -90,7 +90,7 @@ export default function TagInput({
 
   const filtered = search
     ? typeTags.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()) && !selectedIds.includes(t.id))
-    : typeTags.filter((t) => !selectedIds.includes(t.id) && !t.parent_id)
+    : []
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
