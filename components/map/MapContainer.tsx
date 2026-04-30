@@ -6,6 +6,32 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/constants'
 import type { Restaurant, FilterPayload } from '@/lib/types'
 import PinMarker from './PinMarker'
+
+const JITTER_RADIUS = 0.00013 // ~14m at Singapore latitude
+
+function computeDisplayCoords(restaurants: Restaurant[]): Record<string, { lng: number; lat: number }> {
+  const groups: Record<string, Restaurant[]> = {}
+  for (const r of restaurants) {
+    const key = `${r.location_lng},${r.location_lat}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push(r)
+  }
+  const result: Record<string, { lng: number; lat: number }> = {}
+  for (const group of Object.values(groups)) {
+    group.forEach((r, i) => {
+      if (group.length === 1) {
+        result[r.id] = { lng: r.location_lng, lat: r.location_lat }
+      } else {
+        const angle = (i / group.length) * 2 * Math.PI
+        result[r.id] = {
+          lng: r.location_lng + JITTER_RADIUS * Math.cos(angle),
+          lat: r.location_lat + JITTER_RADIUS * Math.sin(angle),
+        }
+      }
+    })
+  }
+  return result
+}
 import AddPinModal from './AddPinModal'
 import EditPinModal from './EditPinModal'
 
@@ -59,6 +85,8 @@ export default function MapContainer({
     }
   }, [addingPin, onAddingPinChange])
 
+  const displayCoords = computeDisplayCoords(restaurants)
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -74,21 +102,26 @@ export default function MapContainer({
       >
         <NavigationControl position="bottom-right" />
 
-        {restaurants.map((r) => (
-          <PinMarker
-            key={r.id}
-            restaurant={r}
-            isOwner={isOwner}
-            editMode={editMode}
-            isSelected={selectedRestaurant?.id === r.id}
-            onClick={() => setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)}
-            onRefresh={onRestaurantSaved}
-            onEdit={() => {
-              setSelectedRestaurant(null)
-              setEditRestaurant(r)
-            }}
-          />
-        ))}
+        {restaurants.map((r) => {
+          const coords = displayCoords[r.id]
+          return (
+            <PinMarker
+              key={r.id}
+              restaurant={r}
+              isOwner={isOwner}
+              editMode={editMode}
+              isSelected={selectedRestaurant?.id === r.id}
+              onClick={() => setSelectedRestaurant(r.id === selectedRestaurant?.id ? null : r)}
+              onRefresh={onRestaurantSaved}
+              onEdit={() => {
+                setSelectedRestaurant(null)
+                setEditRestaurant(r)
+              }}
+              displayLng={coords?.lng ?? r.location_lng}
+              displayLat={coords?.lat ?? r.location_lat}
+            />
+          )
+        })}
 
       </Map>
 
