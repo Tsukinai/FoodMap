@@ -193,8 +193,11 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
               )}
 
               {/* Tags */}
-              {(dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
+              {(cuisineTags.length > 0 || dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+                  {cuisineTags.map((t) => (
+                    <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>
+                  ))}
                   {dishTags.map((t) => (
                     <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>
                   ))}

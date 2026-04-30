@@ -6,6 +6,7 @@ import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import FilterPanel from '@/components/sidebar/FilterPanel'
+import RestaurantList from '@/components/RestaurantList'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
 
   const supabase = createClient()
 
@@ -111,6 +113,8 @@ export default function HomePage() {
           user={user}
           isOwner={isOwner}
           onCollapse={() => setSidebarOpen(false)}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
       </div>
 
@@ -144,9 +148,11 @@ export default function HomePage() {
           </button>
         )}
 
-        {/* Map */}
+        {/* Main content: map or list */}
         <div className="flex-1 relative">
-          {loading ? (
+          {viewMode === 'list' ? (
+            <RestaurantList restaurants={allRestaurants} loading={loading} />
+          ) : loading ? (
             <div
               className="flex items-center justify-center h-full text-sm"
               style={{ background: 'var(--fm-cream)', color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}

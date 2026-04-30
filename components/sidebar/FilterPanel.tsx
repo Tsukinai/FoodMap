@@ -24,6 +24,8 @@ interface Props {
   user: User | null
   isOwner: boolean
   onCollapse?: () => void
+  viewMode?: 'map' | 'list'
+  onViewModeChange?: (mode: 'map' | 'list') => void
 }
 
 const MAX_COST = 300
@@ -36,6 +38,8 @@ export default function FilterPanel({
   user,
   isOwner,
   onCollapse,
+  viewMode = 'map',
+  onViewModeChange,
 }: Props) {
   const supabase = createClient()
 
@@ -194,6 +198,62 @@ export default function FilterPanel({
           allTags={allTags}
           onFilter={(payload) => onChange({ ...filters, ...payload })}
         />
+
+        {/* View mode toggle */}
+        {onViewModeChange && (
+          <div
+            style={{
+              display: 'flex',
+              background: 'var(--fm-cream)',
+              borderRadius: 10,
+              padding: 3,
+              gap: 2,
+            }}
+          >
+            {(['map', 'list'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => onViewModeChange(mode)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  height: 32,
+                  borderRadius: 7,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontFamily: 'var(--font-geist-sans)',
+                  fontWeight: viewMode === mode ? 600 : 400,
+                  background: viewMode === mode ? 'var(--fm-paper)' : 'transparent',
+                  color: viewMode === mode ? 'var(--fm-ink)' : 'var(--fm-ink-3)',
+                  boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {mode === 'map' ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+                    <line x1="9" y1="3" x2="9" y2="18"/>
+                    <line x1="15" y1="6" x2="15" y2="21"/>
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"/>
+                    <line x1="8" y1="12" x2="21" y2="12"/>
+                    <line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                  </svg>
+                )}
+                {mode === 'map' ? '地图' : '列表'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Scrollable filter body ── */}
