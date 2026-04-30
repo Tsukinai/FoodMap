@@ -308,8 +308,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                   value={costRange[1] === MAX_COST ? '' : costRange[1]}
                   onChange={(e) => {
                     const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
-                    const v = Math.max(costRange[0], Math.min(raw, MAX_COST))
-                    setCostRange([costRange[0], v])
+                    setCostRange([costRange[0], raw])
                   }}
                   placeholder="不限"
                   min={0}
