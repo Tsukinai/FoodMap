@@ -12,9 +12,6 @@ interface Props {
   onTagCreated: (tag: Tag) => void
   onTagDeleted?: (tagId: string) => void
   canManage?: boolean
-  presets?: string[]
-  subPresets?: string[]
-  subPresetsParent?: string
 }
 
 const TYPE_LABELS: Record<TagType, string> = {
@@ -22,13 +19,6 @@ const TYPE_LABELS: Record<TagType, string> = {
   dish: '种类 / 菜品',
   taste: '口味',
   scene: '场合',
-}
-
-const TYPE_TAG_CLASS: Record<TagType, string> = {
-  cuisine: 'fm-tag-cuisine',
-  dish: 'fm-tag-dish',
-  taste: 'fm-tag-taste',
-  scene: 'fm-tag-scene',
 }
 
 export default function TagInput({
@@ -39,72 +29,28 @@ export default function TagInput({
   onTagCreated,
   onTagDeleted,
   canManage,
-  presets,
-  subPresets,
-  subPresetsParent,
 }: Props) {
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const label = TYPE_LABELS[type]
-  const tagClass = TYPE_TAG_CLASS[type]
-  const allPresetNames = [...(presets ?? []), ...(subPresets ?? [])]
-
-  // Exclude preset-named tags from the search/available results (shown as chips instead)
-  const filtered = allTags.filter(
-    (t) =>
-      t.type === type &&
-      t.name.toLowerCase().includes(search.toLowerCase()) &&
-      !allPresetNames.includes(t.name)
-  )
-
-  const selectedTags = allTags.filter((t) => selectedIds.includes(t.id))
+  const typeTags = allTags.filter((t) => t.type === type)
+  const topLevel = typeTags.filter((t) => !t.parent_id)
+  const subTags = typeTags.filter((t) => t.parent_id)
 
   function toggle(id: string) {
-    onChange(selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id])
-  }
-
-  function isPresetSelected(name: string): boolean {
-    const tag = allTags.find((t) => t.type === type && t.name === name)
-    return tag ? selectedIds.includes(tag.id) : false
-  }
-
-  async function ensureTag(name: string): Promise<Tag> {
-    const existing = allTags.find((t) => t.type === type && t.name === name)
-    if (existing) return existing
-    const res = await fetch('/api/tags', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type }),
-    })
-    const tag: Tag = await res.json()
-    onTagCreated(tag)
-    return tag
-  }
-
-  async function togglePreset(name: string, isSubPreset = false) {
-    const existing = allTags.find((t) => t.type === type && t.name === name)
-    if (existing && selectedIds.includes(existing.id)) {
-      onChange(selectedIds.filter((i) => i !== existing.id))
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter((i) => i !== id))
       return
     }
-    if (creating) return
-    setCreating(true)
-    try {
-      const tag = await ensureTag(name)
-      let newIds = selectedIds.includes(tag.id) ? selectedIds : [...selectedIds, tag.id]
-
-      if (isSubPreset && subPresetsParent) {
-        const parentTag = await ensureTag(subPresetsParent)
-        if (!newIds.includes(parentTag.id)) newIds = [...newIds, parentTag.id]
-      }
-
-      onChange(newIds)
-    } finally {
-      setCreating(false)
+    const tag = typeTags.find((t) => t.id === id)
+    let newIds = [...selectedIds, id]
+    // sub-tag auto-selects its parent
+    if (tag?.parent_id && !newIds.includes(tag.parent_id)) {
+      newIds = [...newIds, tag.parent_id]
     }
+    onChange(newIds)
   }
 
   async function createTag() {
@@ -138,29 +84,28 @@ export default function TagInput({
     }
   }
 
-  const exactMatch = allTags.some(
-    (t) => t.type === type && t.name.toLowerCase() === search.toLowerCase()
+  const exactMatch = typeTags.some(
+    (t) => t.name.toLowerCase() === search.toLowerCase()
   )
 
-  // Non-preset available tags (only shown in results, not as chips)
-  const available = allTags.filter(
-    (t) => t.type === type && !selectedIds.includes(t.id) && !allPresetNames.includes(t.name)
-  )
+  const filtered = search
+    ? typeTags.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()) && !selectedIds.includes(t.id))
+    : typeTags.filter((t) => !selectedIds.includes(t.id) && !t.parent_id)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* ── Preset chips ── */}
-      {presets && presets.length > 0 && (
+      {/* Top-level chips */}
+      {topLevel.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {presets.map((name) => {
-            const active = isPresetSelected(name)
+          {topLevel.map((tag) => {
+            const active = selectedIds.includes(tag.id)
             if (type === 'cuisine') {
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name] ?? 'var(--fm-muted)'
+              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+              const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
               return (
                 <button
-                  key={name}
-                  onClick={() => togglePreset(name)}
+                  key={tag.id}
+                  onClick={() => toggle(tag.id)}
                   style={{
                     padding: '5px 10px',
                     borderRadius: 8,
@@ -174,36 +119,36 @@ export default function TagInput({
                     transition: 'all 0.12s',
                   }}
                 >
-                  {name}
+                  {tag.name}
                 </button>
               )
             }
             return (
               <button
-                key={name}
-                onClick={() => togglePreset(name, true)}
+                key={tag.id}
+                onClick={() => toggle(tag.id)}
                 className={`fm-chip${active ? ' active' : ''}`}
                 style={{ fontSize: 12.5 }}
               >
-                {name}
+                {tag.name}
               </button>
             )
           })}
         </div>
       )}
 
-      {/* ── Sub-preset chips (e.g. Chinese sub-cuisines) ── */}
-      {subPresets && subPresets.length > 0 && (
+      {/* Sub-tags (cuisine hierarchy) */}
+      {subTags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingLeft: 2 }}>
-          {subPresets.map((name) => {
-            const active = isPresetSelected(name)
+          {subTags.map((tag) => {
+            const active = selectedIds.includes(tag.id)
             if (type === 'cuisine') {
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name] ?? 'var(--fm-muted)'
+              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+              const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
               return (
                 <button
-                  key={name}
-                  onClick={() => togglePreset(name, true)}
+                  key={tag.id}
+                  onClick={() => toggle(tag.id)}
                   style={{
                     padding: '3px 8px',
                     borderRadius: 6,
@@ -217,46 +162,28 @@ export default function TagInput({
                     transition: 'all 0.12s',
                   }}
                 >
-                  {name}
+                  {tag.name}
                 </button>
               )
             }
             return (
               <button
-                key={name}
-                onClick={() => togglePreset(name)}
+                key={tag.id}
+                onClick={() => toggle(tag.id)}
                 className={`fm-chip${active ? ' active' : ''}`}
                 style={{ fontSize: 11.5 }}
               >
-                {name}
+                {tag.name}
               </button>
             )
           })}
         </div>
       )}
 
-      {/* ── Selected non-preset tags ── */}
-      {selectedTags.filter((t) => !allPresetNames.includes(t.name)).length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {selectedTags
-            .filter((t) => !allPresetNames.includes(t.name))
-            .map((t) => (
-              <button
-                key={t.id}
-                onClick={() => toggle(t.id)}
-                className={`fm-tag ${tagClass}`}
-                style={{ cursor: 'pointer' }}
-              >
-                {t.name} <span style={{ opacity: 0.6 }}>✕</span>
-              </button>
-            ))}
-        </div>
-      )}
-
-      {/* ── Search / custom input ── */}
+      {/* Search / custom input */}
       <input
         ref={inputRef}
-        placeholder={`自定义${label}…`}
+        placeholder={`自定义${TYPE_LABELS[type]}…`}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={(e) => {
@@ -281,9 +208,9 @@ export default function TagInput({
         onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
       />
 
-      {/* ── Custom tag results ── */}
+      {/* Custom tag results */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 80, overflowY: 'auto' }}>
-        {(search ? filtered : available).map((t) => (
+        {filtered.map((t) => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <button
               onClick={() => { toggle(t.id); setSearch('') }}

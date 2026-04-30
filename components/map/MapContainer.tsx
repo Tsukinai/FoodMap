@@ -7,26 +7,26 @@ import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/consta
 import type { Restaurant, FilterPayload } from '@/lib/types'
 import PinMarker from './PinMarker'
 
-const JITTER_RADIUS = 0.00013 // ~14m at Singapore latitude
+const PIXEL_SCATTER_RADIUS = 30
 
-function computeDisplayCoords(restaurants: Restaurant[]): Record<string, { lng: number; lat: number }> {
+function computeOffsets(restaurants: Restaurant[]): Record<string, [number, number]> {
   const groups: Record<string, Restaurant[]> = {}
   for (const r of restaurants) {
     const key = `${r.location_lng},${r.location_lat}`
     if (!groups[key]) groups[key] = []
     groups[key].push(r)
   }
-  const result: Record<string, { lng: number; lat: number }> = {}
+  const result: Record<string, [number, number]> = {}
   for (const group of Object.values(groups)) {
     group.forEach((r, i) => {
       if (group.length === 1) {
-        result[r.id] = { lng: r.location_lng, lat: r.location_lat }
+        result[r.id] = [0, 0]
       } else {
-        const angle = (i / group.length) * 2 * Math.PI
-        result[r.id] = {
-          lng: r.location_lng + JITTER_RADIUS * Math.cos(angle),
-          lat: r.location_lat + JITTER_RADIUS * Math.sin(angle),
-        }
+        const angle = (i / group.length) * 2 * Math.PI - Math.PI / 2
+        result[r.id] = [
+          Math.round(PIXEL_SCATTER_RADIUS * Math.cos(angle)),
+          Math.round(PIXEL_SCATTER_RADIUS * Math.sin(angle)),
+        ]
       }
     })
   }
@@ -85,7 +85,7 @@ export default function MapContainer({
     }
   }, [addingPin, onAddingPinChange])
 
-  const displayCoords = computeDisplayCoords(restaurants)
+  const pixelOffsets = computeOffsets(restaurants)
 
   return (
     <div className="relative w-full h-full">
@@ -103,7 +103,6 @@ export default function MapContainer({
         <NavigationControl position="bottom-right" />
 
         {restaurants.map((r) => {
-          const coords = displayCoords[r.id]
           return (
             <PinMarker
               key={r.id}
@@ -117,8 +116,7 @@ export default function MapContainer({
                 setSelectedRestaurant(null)
                 setEditRestaurant(r)
               }}
-              displayLng={coords?.lng ?? r.location_lng}
-              displayLat={coords?.lat ?? r.location_lat}
+              pixelOffset={pixelOffsets[r.id]}
             />
           )
         })}

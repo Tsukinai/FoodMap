@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import type { Tag, Restaurant, RestaurantStatus } from '@/lib/types'
-import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS, PRESET_CUISINE_TAGS, CHINESE_SUB_CUISINES, PRESET_DISH_TYPE_TAGS } from '@/lib/constants'
 import TagInput from '@/components/tags/TagInput'
 
 interface Props {
@@ -40,7 +39,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
-  const [togglingTag, setTogglingTag] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [geoResults, setGeoResults] = useState<{ address: string; postal_code: string; lng: number; lat: number }[]>([])
@@ -50,56 +48,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   useEffect(() => {
     fetch('/api/tags').then((r) => r.json()).then(setAllTags)
   }, [])
-
-  async function ensureTagInModal(name: string, type: Tag['type']): Promise<Tag> {
-    const existing = allTags.find((t) => t.type === type && t.name === name)
-    if (existing) return existing
-    const res = await fetch('/api/tags', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type }),
-    })
-    const tag: Tag = await res.json()
-    setAllTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]))
-    return tag
-  }
-
-  function isTagNameSelected(name: string, type: 'taste' | 'scene'): boolean {
-    const tag = allTags.find((t) => t.type === type && t.name === name)
-    return tag ? (type === 'taste' ? tasteTagIds : sceneTagIds).includes(tag.id) : false
-  }
-
-  async function toggleTasteByName(name: string) {
-    if (togglingTag) return
-    const existing = allTags.find((t) => t.type === 'taste' && t.name === name)
-    if (existing && tasteTagIds.includes(existing.id)) {
-      setTasteTagIds((prev) => prev.filter((id) => id !== existing.id))
-      return
-    }
-    setTogglingTag(name)
-    try {
-      const realTag = await ensureTagInModal(name, 'taste')
-      setTasteTagIds((prev) => (prev.includes(realTag.id) ? prev : [...prev, realTag.id]))
-    } finally {
-      setTogglingTag(null)
-    }
-  }
-
-  async function toggleSceneByName(name: string) {
-    if (togglingTag) return
-    const existing = allTags.find((t) => t.type === 'scene' && t.name === name)
-    if (existing && sceneTagIds.includes(existing.id)) {
-      setSceneTagIds((prev) => prev.filter((id) => id !== existing.id))
-      return
-    }
-    setTogglingTag(name)
-    try {
-      const realTag = await ensureTagInModal(name, 'scene')
-      setSceneTagIds((prev) => (prev.includes(realTag.id) ? prev : [...prev, realTag.id]))
-    } finally {
-      setTogglingTag(null)
-    }
-  }
 
   async function handleGeoSearch() {
     if (!searchQuery.trim()) return
@@ -258,9 +206,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
               onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
               canManage
-              presets={PRESET_CUISINE_TAGS}
-              subPresets={CHINESE_SUB_CUISINES}
-              subPresetsParent="中餐"
             />
           </FormSection>
 
@@ -279,7 +224,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
               onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
               canManage
-              presets={PRESET_DISH_TYPE_TAGS}
             />
           </FormSection>
 
@@ -321,18 +265,16 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
 
             <FormSection label="口味" noMargin>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {PRESET_TASTE_TAGS.map((name) => {
-                  const active = isTagNameSelected(name, 'taste')
-                  const loading = togglingTag === name
+                {allTags.filter((t) => t.type === 'taste').map((tag) => {
+                  const active = tasteTagIds.includes(tag.id)
                   return (
                     <button
-                      key={name}
-                      onClick={() => toggleTasteByName(name)}
-                      disabled={loading}
+                      key={tag.id}
+                      onClick={() => setTasteTagIds((prev) => active ? prev.filter((i) => i !== tag.id) : [...prev, tag.id])}
                       className="fm-tag fm-tag-taste"
-                      style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}
+                      style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', cursor: 'pointer' }}
                     >
-                      {name}
+                      {tag.name}
                     </button>
                   )
                 })}
@@ -343,18 +285,16 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           {/* Scene tags */}
           <FormSection label="场合">
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {PRESET_SCENE_TAGS.map((name) => {
-                const active = isTagNameSelected(name, 'scene')
-                const loading = togglingTag === name
+              {allTags.filter((t) => t.type === 'scene').map((tag) => {
+                const active = sceneTagIds.includes(tag.id)
                 return (
                   <button
-                    key={name}
-                    onClick={() => toggleSceneByName(name)}
-                    disabled={loading}
+                    key={tag.id}
+                    onClick={() => setSceneTagIds((prev) => active ? prev.filter((i) => i !== tag.id) : [...prev, tag.id])}
                     className="fm-tag fm-tag-scene"
-                    style={{ outline: active ? '1.5px solid #4a3d6b' : 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}
+                    style={{ outline: active ? '1.5px solid #4a3d6b' : 'none', cursor: 'pointer' }}
                   >
-                    {name}
+                    {tag.name}
                   </button>
                 )
               })}

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, type } = body
+  const { name, type, parent_id } = body
 
   if (!name || !type || !['cuisine', 'dish', 'taste', 'scene'].includes(type)) {
     return NextResponse.json({ error: 'Invalid tag data' }, { status: 400 })
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('tags')
-    .insert({ name: name.trim(), type })
+    .insert({ name: name.trim(), type, parent_id: parent_id ?? null })
     .select()
     .single()
 

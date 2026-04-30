@@ -84,9 +84,3 @@ export const CUISINE_BG: Record<string, string> = {
   '本地菜': '#fff8f0',
 }
 
-export const PRESET_TASTE_TAGS = ['不辣', '微辣', '特辣']
-export const PRESET_SCENE_TAGS = ['早餐', 'brunch', '正餐', '夜宵', '下午茶/甜点']
-
-export const PRESET_CUISINE_TAGS = ['中餐', '东南亚菜', '韩餐', '日料', '泰餐', '西餐', '甜品']
-export const CHINESE_SUB_CUISINES = ['粤菜', '川菜', '云南菜', '湘菜', '新疆菜']
-export const PRESET_DISH_TYPE_TAGS = ['炸鸡汉堡', '烧烤', '烤肉', '披萨', '炒菜', '漂亮饭']

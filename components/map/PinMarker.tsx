@@ -13,11 +13,10 @@ interface Props {
   onClick: () => void
   onRefresh: () => void
   onEdit: () => void
-  displayLng?: number
-  displayLat?: number
+  pixelOffset?: [number, number]
 }
 
-export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit, displayLng, displayLat }: Props) {
+export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit, pixelOffset }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -45,15 +44,15 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
     onRefresh()
   }
 
-  const markerLng = displayLng ?? restaurant.location_lng
-  const markerLat = displayLat ?? restaurant.location_lat
+  const [offsetX, offsetY] = pixelOffset ?? [0, 0]
 
   return (
     <>
       <Marker
-        longitude={markerLng}
-        latitude={markerLat}
+        longitude={restaurant.location_lng}
+        latitude={restaurant.location_lat}
         anchor="bottom"
+        offset={[offsetX, offsetY]}
         onClick={(e) => {
           e.originalEvent.stopPropagation()
           onClick()
@@ -93,10 +92,10 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
       {isSelected && (
         <Popup
-          longitude={markerLng}
-          latitude={markerLat}
+          longitude={restaurant.location_lng}
+          latitude={restaurant.location_lat}
           anchor="bottom"
-          offset={36}
+          offset={[offsetX, offsetY - 36]}
           closeButton={false}
           onClose={onClick}
           maxWidth="360px"

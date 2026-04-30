@@ -1,15 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
-import {
-  CUISINE_COLORS,
-  CUISINE_BG,
-  PRESET_TASTE_TAGS,
-  PRESET_SCENE_TAGS,
-  PRESET_CUISINE_TAGS,
-  CHINESE_SUB_CUISINES,
-  PRESET_DISH_TYPE_TAGS,
-} from '@/lib/constants'
+import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
@@ -53,28 +46,11 @@ export default function FilterPanel({
   }
 
   // ── Tag helpers ──────────────────────────────────────────────────────────
-  const tasteTags     = allTags.filter((t) => t.type === 'taste')
-  const sceneTags     = allTags.filter((t) => t.type === 'scene')
-
-  // Cuisine: always show preset top-level + sub-cuisines; append any extra DB tags
-  const dbCuisineNames = allTags.filter((t) => t.type === 'cuisine').map((t) => t.name)
-  const extraCuisineNames = dbCuisineNames.filter(
-    (n) => !PRESET_CUISINE_TAGS.includes(n) && !CHINESE_SUB_CUISINES.includes(n)
-  )
-  const displayCuisineNames = [...PRESET_CUISINE_TAGS, ...extraCuisineNames]
-
-  // Dish type (种类): always show presets; append any extra DB dish tags
-  const dbDishNames = allTags.filter((t) => t.type === 'dish').map((t) => t.name)
-  const extraDishNames = dbDishNames.filter((n) => !PRESET_DISH_TYPE_TAGS.includes(n))
-  const displayDishTypeNames = [...PRESET_DISH_TYPE_TAGS, ...extraDishNames]
-
-  const displayTasteTags = tasteTags.length > 0
-    ? tasteTags
-    : PRESET_TASTE_TAGS.map((name, i) => ({ id: `pt-${i}`, name, type: 'taste' as const, created_at: '' }))
-
-  const displaySceneTags = sceneTags.length > 0
-    ? sceneTags
-    : PRESET_SCENE_TAGS.map((name, i) => ({ id: `ps-${i}`, name, type: 'scene' as const, created_at: '' }))
+  const cuisineTopLevel = allTags.filter((t) => t.type === 'cuisine' && !t.parent_id)
+  const cuisineSub      = allTags.filter((t) => t.type === 'cuisine' && !!t.parent_id)
+  const dishTags        = allTags.filter((t) => t.type === 'dish')
+  const tasteTags       = allTags.filter((t) => t.type === 'taste')
+  const sceneTags       = allTags.filter((t) => t.type === 'scene')
 
   // ── Toggle helpers ───────────────────────────────────────────────────────
   function toggleArr(key: keyof FilterPayload, name: string) {
@@ -288,14 +264,14 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayCuisineNames.map((name) => {
-              const active = filters.cuisine_tags.includes(name)
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
+            {cuisineTopLevel.map((tag) => {
+              const active = filters.cuisine_tags.includes(tag.name)
+              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+              const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
               return (
                 <button
-                  key={name}
-                  onClick={() => toggleArr('cuisine_tags', name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('cuisine_tags', tag.name)}
                   style={{
                     padding: '5px 10px',
                     borderRadius: 8,
@@ -309,55 +285,57 @@ export default function FilterPanel({
                     transition: 'all 0.12s',
                   }}
                 >
-                  {name}
+                  {tag.name}
                 </button>
               )
             })}
           </div>
-          {/* Chinese sub-cuisines */}
-          <div style={{ marginTop: 6, paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {CHINESE_SUB_CUISINES.map((name) => {
-              const active = filters.cuisine_tags.includes(name)
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
-              return (
-                <button
-                  key={name}
-                  onClick={() => toggleArr('cuisine_tags', name)}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {name}
-                </button>
-              )
-            })}
-          </div>
+          {/* Sub-cuisines */}
+          {cuisineSub.length > 0 && (
+            <div style={{ marginTop: 6, paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {cuisineSub.map((tag) => {
+                const active = filters.cuisine_tags.includes(tag.name)
+                const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+                const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleArr('cuisine_tags', tag.name)}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      fontSize: 11.5,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      background: active ? fg : bg,
+                      color: active ? '#fff' : fg,
+                      border: `1.5px solid ${active ? fg : 'transparent'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {tag.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* ── Dish type (种类) ── */}
         <section>
           <FilterLabel count={filters.dish_tags.length}>种类</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayDishTypeNames.map((name) => {
-              const active = filters.dish_tags.includes(name)
+            {dishTags.map((tag) => {
+              const active = filters.dish_tags.includes(tag.name)
               return (
                 <button
-                  key={name}
-                  onClick={() => toggleArr('dish_tags', name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('dish_tags', tag.name)}
                   className={`fm-chip${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -401,16 +379,16 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayTasteTags.map((t) => {
-              const active = (filters.taste_tags ?? []).includes(t.name)
+            {tasteTags.map((tag) => {
+              const active = (filters.taste_tags ?? []).includes(tag.name)
               return (
                 <button
-                  key={t.id}
-                  onClick={() => toggleArr('taste_tags', t.name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('taste_tags', tag.name)}
                   className={`fm-chip fm-chip-taste${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {t.name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -421,16 +399,16 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.scene_tags?.length ?? 0}>场合</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displaySceneTags.map((t) => {
-              const active = (filters.scene_tags ?? []).includes(t.name)
+            {sceneTags.map((tag) => {
+              const active = (filters.scene_tags ?? []).includes(tag.name)
               return (
                 <button
-                  key={t.id}
-                  onClick={() => toggleArr('scene_tags', t.name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('scene_tags', tag.name)}
                   className={`fm-chip fm-chip-scene${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {t.name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -450,14 +428,24 @@ export default function FilterPanel({
             {restaurantCount} 个餐厅
             {hasFilters && <span style={{ color: 'var(--fm-orange)', marginLeft: 4 }}>（已筛选）</span>}
           </span>
-          {hasFilters && (
-            <button
-              onClick={clearAll}
-              style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer', fontSize: 11.5 }}
-            >
-              重置
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {isOwner && (
+              <Link
+                href="/tags"
+                style={{ fontSize: 11.5, color: 'var(--fm-ink-4)', textDecoration: 'none' }}
+              >
+                管理标签
+              </Link>
+            )}
+            {hasFilters && (
+              <button
+                onClick={clearAll}
+                style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer', fontSize: 11.5 }}
+              >
+                重置
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Auth */}

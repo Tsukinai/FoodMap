@@ -4,6 +4,7 @@ export interface Tag {
   id: string
   name: string
   type: TagType
+  parent_id: string | null
   created_at: string
 }
 
