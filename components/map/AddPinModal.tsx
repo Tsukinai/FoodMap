@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Tag, Restaurant, RestaurantStatus } from '@/lib/types'
+import type { Tag, Restaurant, RestaurantStatus, RestaurantRating } from '@/lib/types'
+import { RATING_ORDER } from '@/lib/types'
 import TagInput from '@/components/tags/TagInput'
 
 interface Props {
@@ -37,6 +38,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     restaurant?.tags.filter((t) => t.type === 'scene').map((t) => t.id) ?? []
   )
   const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
+  const [rating, setRating] = useState<RestaurantRating>(restaurant?.rating ?? '未评分')
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
 
@@ -84,6 +86,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           notes: notes || null,
           signature_dishes: signatureDishes,
           status,
+          rating,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
           taste_tag_ids: tasteTagIds,
@@ -301,38 +304,69 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </div>
           </FormSection>
 
-          {/* Status */}
-          <FormSection label="状态">
-            <div style={{ display: 'flex', gap: 6 }}>
-              {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => setStatus(val)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    border: status === val
-                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
-                      : '1px solid var(--fm-line-2)',
-                    background: status === val
-                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
-                      : 'var(--fm-paper)',
-                    color: status === val
-                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
-                      : 'var(--fm-ink-3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </FormSection>
+          {/* Status + Rating row */}
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
+            <FormSection label="状态" noMargin>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setStatus(val)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 0',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      border: status === val
+                        ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                        : '1px solid var(--fm-line-2)',
+                      background: status === val
+                        ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                        : 'var(--fm-paper)',
+                      color: status === val
+                        ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                        : 'var(--fm-ink-3)',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </FormSection>
+
+            <FormSection label="评分" noMargin>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {RATING_ORDER.map((r) => {
+                  const { bg, color, border } = getRatingStyle(r)
+                  const active = rating === r
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setRating(r)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 7,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-geist-sans)',
+                        background: active ? bg : 'var(--fm-paper)',
+                        color: active ? color : 'var(--fm-ink-3)',
+                        border: active ? `1.5px solid ${border}` : '1px solid var(--fm-line-2)',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {r}
+                    </button>
+                  )
+                })}
+              </div>
+            </FormSection>
+          </div>
 
           {/* Notes */}
           <FormSection label="笔记">
@@ -401,6 +435,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
       </div>
     </div>
   )
+}
+
+export function getRatingStyle(rating: string): { bg: string; color: string; border: string } {
+  switch (rating) {
+    case '夯':    return { bg: '#fee2e2', color: '#dc2626', border: '#dc2626' }
+    case '顶级':  return { bg: '#fef3c7', color: '#d97706', border: '#d97706' }
+    case '人上人': return { bg: '#ede9fe', color: '#7c3aed', border: '#7c3aed' }
+    case 'NPC':   return { bg: '#f3f4f6', color: '#6b7280', border: '#9ca3af' }
+    case '拉完了': return { bg: '#e5e7eb', color: '#374151', border: '#6b7280' }
+    default:      return { bg: 'var(--fm-muted)', color: 'var(--fm-ink-4)', border: 'var(--fm-line-2)' }
+  }
 }
 
 function FmInput({ value, onChange, onKeyDown, placeholder }: {

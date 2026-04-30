@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Marker, Popup } from 'react-map-gl/maplibre'
 import type { Restaurant } from '@/lib/types'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { getRatingStyle } from '@/components/map/AddPinModal'
 
 interface Props {
   restaurant: Restaurant
@@ -185,8 +186,8 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
             {/* Card body */}
             <div style={{ padding: '12px 14px 14px' }}>
-              {/* Name + status badge */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+              {/* Name + badges */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
                 <div
                   style={{
                     fontFamily: 'var(--font-instrument-serif)',
@@ -211,6 +212,26 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
                 >
                   {restaurant.status === 'want' ? '想吃' : '已吃'}
                 </span>
+                {restaurant.rating && restaurant.rating !== '未评分' && (() => {
+                  const { bg, color, border } = getRatingStyle(restaurant.rating)
+                  return (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontFamily: 'var(--font-geist-mono)',
+                        fontWeight: 600,
+                        padding: '2px 7px',
+                        borderRadius: 99,
+                        flexShrink: 0,
+                        background: bg,
+                        color,
+                        border: `1px solid ${border}`,
+                      }}
+                    >
+                      {restaurant.rating}
+                    </span>
+                  )
+                })()}
               </div>
 
               {/* Address */}

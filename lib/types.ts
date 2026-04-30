@@ -11,6 +11,10 @@ export interface Tag {
 
 export type RestaurantStatus = 'want' | 'visited'
 
+export type RestaurantRating = '夯' | '顶级' | '人上人' | 'NPC' | '拉完了' | '未评分'
+
+export const RATING_ORDER: RestaurantRating[] = ['夯', '顶级', '人上人', 'NPC', '拉完了', '未评分']
+
 export interface Restaurant {
   id: string
   name: string
@@ -23,6 +27,7 @@ export interface Restaurant {
   notes: string | null
   signature_dishes: string[]
   status: RestaurantStatus
+  rating: RestaurantRating
   created_at: string
   updated_at: string
   tags: Tag[]
@@ -39,6 +44,7 @@ export interface RestaurantFormData {
   notes: string
   signature_dishes: string[]
   status: RestaurantStatus
+  rating: RestaurantRating
   cuisine_tag_ids: string[]
   dish_tag_ids: string[]
   taste_tag_ids: string[]
@@ -53,6 +59,7 @@ export interface FilterPayload {
   max_cost: number | null
   min_cost: number | null
   status: RestaurantStatus[]
+  ratings: RestaurantRating[]
 }
 
 export interface OneMapResult {
