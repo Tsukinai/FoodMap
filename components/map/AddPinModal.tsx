@@ -42,6 +42,40 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
 
+  const [chainSearchOpen, setChainSearchOpen] = useState(false)
+  const [chainQuery, setChainQuery] = useState('')
+  const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
+  const [chainLoaded, setChainLoaded] = useState(false)
+
+  const chainResults = chainQuery.trim()
+    ? allRestaurants.filter((r) => r.name.includes(chainQuery.trim()))
+    : []
+
+  async function openChainSearch() {
+    setChainSearchOpen(true)
+    if (!chainLoaded) {
+      const res = await fetch('/api/restaurants')
+      const data: Restaurant[] = await res.json()
+      setAllRestaurants(data)
+      setChainLoaded(true)
+    }
+  }
+
+  function applyChainTemplate(r: Restaurant) {
+    setName(r.name)
+    setNotes(r.notes ?? '')
+    setSignatureDishes(r.signature_dishes)
+    setCostRange([r.cost_min ?? 0, r.cost_max ?? MAX_COST])
+    setStatus(r.status)
+    setRating(r.rating)
+    setCuisineTagIds(r.tags.filter((t) => t.type === 'cuisine').map((t) => t.id))
+    setDishTagIds(r.tags.filter((t) => t.type === 'dish').map((t) => t.id))
+    setTasteTagIds(r.tags.filter((t) => t.type === 'taste').map((t) => t.id))
+    setSceneTagIds(r.tags.filter((t) => t.type === 'scene').map((t) => t.id))
+    setChainSearchOpen(false)
+    setChainQuery('')
+  }
+
   const [searchQuery, setSearchQuery] = useState('')
   const [geoResults, setGeoResults] = useState<{ address: string; postal_code: string; lng: number; lat: number }[]>([])
   const [pinLng, setPinLng] = useState(restaurant?.location_lng ?? lng ?? 0)
@@ -147,12 +181,32 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         {/* Scrollable body */}
         <div className="fm-modal-body flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
           {/* Name + Address row */}
-          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <FmInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="餐馆名称 *"
-            />
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: chainSearchOpen ? 6 : 14 }}>
+            <div>
+              <FmInput
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="餐馆名称 *"
+              />
+              {!restaurant && !chainSearchOpen && (
+                <button
+                  onClick={openChainSearch}
+                  style={{
+                    marginTop: 5,
+                    fontSize: 12,
+                    color: 'var(--fm-orange-dark)',
+                    fontFamily: 'var(--font-geist-mono)',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  连锁分店，从已有店复制 →
+                </button>
+              )}
+            </div>
             <div className="relative">
               <FmInput
                 value={searchQuery}
@@ -188,6 +242,67 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               )}
             </div>
           </div>
+
+          {/* Chain restaurant copy search */}
+          {chainSearchOpen && (
+            <div style={{ marginBottom: 14, position: 'relative' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <FmInput
+                    value={chainQuery}
+                    onChange={(e) => setChainQuery(e.target.value)}
+                    placeholder="搜索已有餐馆名称…"
+                  />
+                  {chainResults.length > 0 && (
+                    <div
+                      className="absolute top-full left-0 right-0 z-20 rounded-lg overflow-hidden"
+                      style={{
+                        border: '1px solid var(--fm-line-2)',
+                        background: 'var(--fm-paper)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                        marginTop: 4,
+                        maxHeight: 180,
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {chainResults.map((r) => (
+                        <button
+                          key={r.id}
+                          className="w-full text-left px-3 py-2.5 text-base transition-colors"
+                          style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--fm-muted)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          onClick={() => applyChainTemplate(r)}
+                        >
+                          <span style={{ fontWeight: 500 }}>{r.name}</span>
+                          {r.tags.filter((t) => t.type === 'cuisine').length > 0 && (
+                            <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)' }}>
+                              {r.tags.filter((t) => t.type === 'cuisine').map((t) => t.name).join(' · ')}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setChainSearchOpen(false); setChainQuery('') }}
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--fm-ink-4)',
+                    fontFamily: 'var(--font-geist-mono)',
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 4px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
 
           {address ? (
             <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>

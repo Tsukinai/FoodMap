@@ -326,14 +326,14 @@ export default function FilterPanel({
                         onClick={() => toggleExpand(tag.id)}
                         title={isExpanded ? '收起' : '展开'}
                         style={{
-                          width: 28,
-                          height: 28,
+                          width: 24,
+                          height: 24,
                           borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
+                          border: '1.5px solid var(--fm-line-2)',
+                          background: 'var(--fm-muted)',
                           cursor: 'pointer',
-                          color: 'var(--fm-ink-4)',
-                          fontSize: 9,
+                          color: 'var(--fm-ink-2)',
+                          fontSize: 11,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
