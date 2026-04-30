@@ -115,7 +115,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         }}
       >
         {/* Header */}
-        <div style={{ padding: '28px 36px 0' }}>
+        <div className="fm-modal-header" style={{ padding: '28px 36px 0' }}>
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
@@ -142,9 +142,9 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
+        <div className="fm-modal-body flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
           {/* Name + Address row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
             <FmInput
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -228,7 +228,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           </FormSection>
 
           {/* Cost + Taste row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
             <FormSection label="人均消费 (S$)" noMargin>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>

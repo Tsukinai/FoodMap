@@ -38,7 +38,8 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(true)
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
 
   const supabase = createClient()
@@ -56,6 +57,17 @@ export default function HomePage() {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    const update = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (!mobile) setSidebarOpen(true)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   const fetchRestaurants = useCallback(async () => {
@@ -94,9 +106,27 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0"
+          style={{ background: 'rgba(31,28,24,0.4)', zIndex: 40 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar — collapsible wrapper */}
       <div
-        style={{
+        style={isMobile ? {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100%',
+          width: sidebarOpen ? 292 : 0,
+          zIndex: 50,
+          overflow: 'hidden',
+          transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+        } : {
           width: sidebarOpen ? 292 : 0,
           flexShrink: 0,
           overflow: 'hidden',
