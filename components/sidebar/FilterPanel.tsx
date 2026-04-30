@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
@@ -32,6 +33,15 @@ export default function FilterPanel({
   onViewModeChange,
 }: Props) {
   const supabase = createClient()
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
+
+  function toggleExpand(id: string) {
+    setExpandedParents(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   async function signIn() {
     await supabase.auth.signInWithOAuth({
@@ -48,6 +58,13 @@ export default function FilterPanel({
   // ── Tag helpers ──────────────────────────────────────────────────────────
   const cuisineTopLevel = allTags.filter((t) => t.type === 'cuisine' && !t.parent_id)
   const cuisineSub      = allTags.filter((t) => t.type === 'cuisine' && !!t.parent_id)
+  const childrenByParent = new Map<string, Tag[]>()
+  cuisineSub.forEach(tag => {
+    if (!tag.parent_id) return
+    const list = childrenByParent.get(tag.parent_id) ?? []
+    list.push(tag)
+    childrenByParent.set(tag.parent_id, list)
+  })
   const dishTags        = allTags.filter((t) => t.type === 'dish')
   const tasteTags       = allTags.filter((t) => t.type === 'taste')
   const sceneTags       = allTags.filter((t) => t.type === 'scene')
@@ -263,63 +280,109 @@ export default function FilterPanel({
         {/* ── Cuisine ── */}
         <section>
           <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {cuisineTopLevel.map((tag) => {
-              const active = filters.cuisine_tags.includes(tag.name)
-              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleArr('cuisine_tags', tag.name)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {tag.name}
-                </button>
-              )
-            })}
-          </div>
-          {/* Sub-cuisines */}
-          {cuisineSub.length > 0 && (
-            <div style={{ marginTop: 6, paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {cuisineSub.map((tag) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {cuisineTopLevel.map((tag) => {
+                const children = childrenByParent.get(tag.id) ?? []
+                const isExpanded = expandedParents.has(tag.id)
                 const active = filters.cuisine_tags.includes(tag.name)
                 const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
                 const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
                 return (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleArr('cuisine_tags', tag.name)}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 6,
-                      fontSize: 11.5,
-                      fontWeight: 500,
-                      fontFamily: 'var(--font-geist-sans)',
-                      background: active ? fg : bg,
-                      color: active ? '#fff' : fg,
-                      border: `1.5px solid ${active ? fg : 'transparent'}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    {tag.name}
-                  </button>
+                  <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <button
+                      onClick={() => toggleArr('cuisine_tags', tag.name)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-geist-sans)',
+                        background: active ? fg : bg,
+                        color: active ? '#fff' : fg,
+                        border: `1.5px solid ${active ? fg : 'transparent'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                    {children.length > 0 && (
+                      <button
+                        onClick={() => toggleExpand(tag.id)}
+                        title={isExpanded ? '收起' : '展开'}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          color: 'var(--fm-ink-4)',
+                          fontSize: 9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          transition: 'transform 0.15s',
+                          transform: isExpanded ? 'rotate(90deg)' : 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        ▸
+                      </button>
+                    )}
+                  </div>
                 )
               })}
             </div>
-          )}
+
+            {/* Expanded sub-cuisine panels */}
+            {cuisineTopLevel
+              .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
+              .map(parent => {
+                const parentFg = CUISINE_COLORS[parent.name] ?? 'var(--fm-ink-2)'
+                return (
+                  <div
+                    key={parent.id}
+                    style={{
+                      paddingLeft: 8,
+                      borderLeft: `2px solid ${parentFg}`,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 4,
+                    }}
+                  >
+                    {childrenByParent.get(parent.id)!.map(child => {
+                      const childActive = filters.cuisine_tags.includes(child.name)
+                      const childFg = CUISINE_COLORS[child.name] ?? parentFg
+                      const childBg = CUISINE_BG[child.name] ?? 'var(--fm-muted)'
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => toggleArr('cuisine_tags', child.name)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 500,
+                            fontFamily: 'var(--font-geist-sans)',
+                            background: childActive ? childFg : childBg,
+                            color: childActive ? '#fff' : childFg,
+                            border: `1.5px solid ${childActive ? childFg : 'transparent'}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.12s',
+                          }}
+                        >
+                          {child.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })
+            }
+          </div>
         </section>
 
         {/* ── Dish type (种类) ── */}
