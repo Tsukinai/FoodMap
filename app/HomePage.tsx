@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import FilterPanel from '@/components/sidebar/FilterPanel'
 import RestaurantList from '@/components/RestaurantList'
+import GuestbookPanel from '@/components/guestbook/GuestbookPanel'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -40,7 +41,7 @@ export default function HomePage() {
   const [addingPin, setAddingPin] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(true)
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
+  const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
 
   const supabase = createClient()
 
@@ -176,9 +177,11 @@ export default function HomePage() {
           </button>
         )}
 
-        {/* Main content: map or list */}
+        {/* Main content: map, list, or guestbook */}
         <div className="flex-1 relative">
-          {viewMode === 'list' ? (
+          {viewMode === 'guestbook' ? (
+            <GuestbookPanel user={user} isOwner={isOwner} />
+          ) : viewMode === 'list' ? (
             <RestaurantList
               restaurants={allRestaurants}
               loading={loading}

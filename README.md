@@ -103,6 +103,7 @@ lib/
 - 点击地图 Pin 显示餐馆 popup，支持从 popup 直接跳转编辑
 - 餐馆照片上传（Supabase Storage）
 - 添加about页
+- 添加从夯到拉排名
 
 ### 技术债
 
