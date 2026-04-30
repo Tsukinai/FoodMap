@@ -10,7 +10,7 @@ export default async function TagsPage() {
   if (!user) redirect('/')
 
   const supabase = await createClient()
-  const { data } = await supabase.from('tags').select('*').order('name')
+  const { data } = await supabase.from('tags').select('*').order('sort_order').order('name')
   const tags: Tag[] = data ?? []
 
   return <TagsManager initialTags={tags} />

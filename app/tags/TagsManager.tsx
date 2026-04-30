@@ -179,6 +179,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                 >
                   {/* Top-level tags */}
                   <DndContext
+                    id={`dnd-${type}-top`}
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={makeDragHandler(type, null, topLevel)}
@@ -229,6 +230,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                           {parent.name} 子类
                         </span>
                         <DndContext
+                          id={`dnd-${type}-${parent.id}`}
                           sensors={sensors}
                           collisionDetection={closestCenter}
                           onDragEnd={makeDragHandler(type, parent.id, children)}

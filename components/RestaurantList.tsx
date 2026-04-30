@@ -1,7 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import type { Restaurant } from '@/lib/types'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+
+const PAGE_SIZE = 6
 
 interface Props {
   restaurants: Restaurant[]
@@ -70,6 +73,13 @@ function getCuisineEmoji(cuisine?: string): string {
 }
 
 export default function RestaurantList({ restaurants, loading }: Props) {
+  const [page, setPage] = useState(0)
+
+  useEffect(() => { setPage(0) }, [restaurants])
+
+  const totalPages = Math.ceil(restaurants.length / PAGE_SIZE)
+  const pageItems = restaurants.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
   if (loading) {
     return (
       <div
@@ -124,16 +134,71 @@ export default function RestaurantList({ restaurants, loading }: Props) {
             color: 'var(--fm-ink-3)',
           }}
         >
-          {restaurants.length} 家
+          {restaurants.length === 0
+            ? '0 家'
+            : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, restaurants.length)} / ${restaurants.length} 家`}
         </span>
       </div>
 
       {/* List */}
       <div className="px-4 py-3 flex flex-col gap-2">
-        {restaurants.map((r) => (
+        {pageItems.map((r) => (
           <RestaurantCard key={r.id} restaurant={r} />
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div
+          className="sticky bottom-0 flex items-center justify-between px-6 py-3"
+          style={{
+            background: 'var(--fm-cream)',
+            borderTop: '1px solid var(--fm-line)',
+          }}
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            style={{
+              padding: '5px 14px',
+              borderRadius: 8,
+              border: '1px solid var(--fm-line)',
+              background: page === 0 ? 'transparent' : 'var(--fm-paper)',
+              color: page === 0 ? 'var(--fm-ink-4)' : 'var(--fm-ink)',
+              fontFamily: 'var(--font-geist-sans)',
+              fontSize: 13,
+              cursor: page === 0 ? 'default' : 'pointer',
+            }}
+          >
+            ← 上一页
+          </button>
+          <span
+            style={{
+              fontSize: 13,
+              fontFamily: 'var(--font-geist-mono)',
+              color: 'var(--fm-ink-3)',
+            }}
+          >
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            style={{
+              padding: '5px 14px',
+              borderRadius: 8,
+              border: '1px solid var(--fm-line)',
+              background: page === totalPages - 1 ? 'transparent' : 'var(--fm-paper)',
+              color: page === totalPages - 1 ? 'var(--fm-ink-4)' : 'var(--fm-ink)',
+              fontFamily: 'var(--font-geist-sans)',
+              fontSize: 13,
+              cursor: page === totalPages - 1 ? 'default' : 'pointer',
+            }}
+          >
+            下一页 →
+          </button>
+        </div>
+      )}
     </div>
   )
 }

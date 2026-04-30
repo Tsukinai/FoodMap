@@ -39,6 +39,32 @@ export default function TagInput({
   const topLevel = typeTags.filter((t) => !t.parent_id)
   const subTags = typeTags.filter((t) => t.parent_id)
 
+  // Build children map for accordion
+  const childrenByParent = new Map<string, Tag[]>()
+  subTags.forEach(tag => {
+    if (!tag.parent_id) return
+    const list = childrenByParent.get(tag.parent_id) ?? []
+    list.push(tag)
+    childrenByParent.set(tag.parent_id, list)
+  })
+
+  // Pre-expand parents that already have a selected child (edit mode)
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(() => {
+    const initial = new Set<string>()
+    subTags.forEach(tag => {
+      if (tag.parent_id && selectedIds.includes(tag.id)) initial.add(tag.parent_id)
+    })
+    return initial
+  })
+
+  function toggleExpand(id: string) {
+    setExpandedParents(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
   function toggle(id: string) {
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter((i) => i !== id))
@@ -96,87 +122,120 @@ export default function TagInput({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Top-level chips */}
       {topLevel.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {topLevel.map((tag) => {
-            const active = selectedIds.includes(tag.id)
-            if (type === 'cuisine') {
-              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {topLevel.map((tag) => {
+              const active = selectedIds.includes(tag.id)
+              const children = childrenByParent.get(tag.id) ?? []
+              const isExpanded = expandedParents.has(tag.id)
+              if (type === 'cuisine') {
+                const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+                const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
+                return (
+                  <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <button
+                      onClick={() => toggle(tag.id)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-geist-sans)',
+                        background: active ? fg : bg,
+                        color: active ? '#fff' : fg,
+                        border: `1.5px solid ${active ? fg : 'transparent'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                    {children.length > 0 && (
+                      <button
+                        onClick={() => toggleExpand(tag.id)}
+                        title={isExpanded ? '收起' : '展开'}
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          color: 'var(--fm-ink-4)',
+                          fontSize: 9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          transition: 'transform 0.15s',
+                          transform: isExpanded ? 'rotate(90deg)' : 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        ▸
+                      </button>
+                    )}
+                  </div>
+                )
+              }
               return (
                 <button
                   key={tag.id}
                   onClick={() => toggle(tag.id)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
+                  className={`fm-chip${active ? ' active' : ''}`}
+                  style={{ fontSize: 12.5 }}
                 >
                   {tag.name}
                 </button>
               )
-            }
-            return (
-              <button
-                key={tag.id}
-                onClick={() => toggle(tag.id)}
-                className={`fm-chip${active ? ' active' : ''}`}
-                style={{ fontSize: 12.5 }}
-              >
-                {tag.name}
-              </button>
-            )
-          })}
-        </div>
-      )}
+            })}
+          </div>
 
-      {/* Sub-tags (cuisine hierarchy) */}
-      {subTags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingLeft: 2 }}>
-          {subTags.map((tag) => {
-            const active = selectedIds.includes(tag.id)
-            if (type === 'cuisine') {
-              const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
+          {/* Expanded sub-cuisine panels */}
+          {type === 'cuisine' && topLevel
+            .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
+            .map(parent => {
+              const parentFg = CUISINE_COLORS[parent.name] ?? 'var(--fm-ink-2)'
               return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggle(tag.id)}
+                <div
+                  key={parent.id}
                   style={{
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
+                    paddingLeft: 8,
+                    borderLeft: `2px solid ${parentFg}`,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 4,
                   }}
                 >
-                  {tag.name}
-                </button>
+                  {childrenByParent.get(parent.id)!.map(child => {
+                    const childActive = selectedIds.includes(child.id)
+                    const childFg = CUISINE_COLORS[child.name] ?? parentFg
+                    const childBg = CUISINE_BG[child.name] ?? 'var(--fm-muted)'
+                    return (
+                      <button
+                        key={child.id}
+                        onClick={() => toggle(child.id)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: 11.5,
+                          fontWeight: 500,
+                          fontFamily: 'var(--font-geist-sans)',
+                          background: childActive ? childFg : childBg,
+                          color: childActive ? '#fff' : childFg,
+                          border: `1.5px solid ${childActive ? childFg : 'transparent'}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.12s',
+                        }}
+                      >
+                        {child.name}
+                      </button>
+                    )
+                  })}
+                </div>
               )
-            }
-            return (
-              <button
-                key={tag.id}
-                onClick={() => toggle(tag.id)}
-                className={`fm-chip${active ? ' active' : ''}`}
-                style={{ fontSize: 11.5 }}
-              >
-                {tag.name}
-              </button>
-            )
-          })}
+            })
+          }
         </div>
       )}
 
