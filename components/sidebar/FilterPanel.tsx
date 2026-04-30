@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
+import type { Tag, FilterPayload, RestaurantStatus, RestaurantRating } from '@/lib/types'
+import { RATING_ORDER } from '@/lib/types'
+import { getRatingStyle } from '@/components/map/AddPinModal'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -91,6 +93,12 @@ export default function FilterPanel({
     onChange({ ...filters, status: next })
   }
 
+  function toggleRating(r: RestaurantRating) {
+    const current = filters.ratings ?? []
+    const next = current.includes(r) ? current.filter((v) => v !== r) : [...current, r]
+    onChange({ ...filters, ratings: next })
+  }
+
   function clearAll() {
     onChange({
       cuisine_tags: [],
@@ -100,6 +108,7 @@ export default function FilterPanel({
       max_cost:     null,
       min_cost:     null,
       status:       [],
+      ratings:      [],
     })
   }
 
@@ -110,7 +119,8 @@ export default function FilterPanel({
     (filters.scene_tags?.length ?? 0) > 0 ||
     filters.max_cost !== null ||
     filters.min_cost !== null ||
-    (filters.status?.length ?? 0) > 0
+    (filters.status?.length ?? 0) > 0 ||
+    (filters.ratings?.length ?? 0) > 0
 
   // ── Shared input style ───────────────────────────────────────────────────
   const costInputStyle: React.CSSProperties = {
@@ -316,14 +326,14 @@ export default function FilterPanel({
                         onClick={() => toggleExpand(tag.id)}
                         title={isExpanded ? '收起' : '展开'}
                         style={{
-                          width: 28,
-                          height: 28,
+                          width: 24,
+                          height: 24,
                           borderRadius: 6,
-                          border: 'none',
-                          background: 'transparent',
+                          border: '1.5px solid var(--fm-line-2)',
+                          background: 'var(--fm-muted)',
                           cursor: 'pointer',
-                          color: 'var(--fm-ink-4)',
-                          fontSize: 9,
+                          color: 'var(--fm-ink-2)',
+                          fontSize: 11,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -409,39 +419,6 @@ export default function FilterPanel({
           </div>
         </section>
 
-        {/* ── Cost range ── */}
-        <section>
-          <FilterLabel count={(filters.min_cost || filters.max_cost) ? 1 : 0} countLabel="已设">
-            人均消费 (S$)
-          </FilterLabel>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="number"
-              value={filters.min_cost ?? ''}
-              onChange={handleCostMin}
-              placeholder="下限"
-              min={0}
-              max={MAX_COST}
-              style={costInputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-            />
-            <span style={{ color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', fontSize: 13 }}>–</span>
-            <input
-              type="number"
-              value={filters.max_cost ?? ''}
-              onChange={handleCostMax}
-              placeholder="上限"
-              min={0}
-              max={MAX_COST}
-              style={costInputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-            />
-            <span style={{ fontSize: 11, color: 'var(--fm-ink-4)', whiteSpace: 'nowrap' }}>每人</span>
-          </div>
-        </section>
-
         {/* ── Taste ── */}
         <section>
           <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
@@ -476,6 +453,37 @@ export default function FilterPanel({
                   style={{ fontSize: 12 }}
                 >
                   {tag.name}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── Rating ── */}
+        <section>
+          <FilterLabel count={filters.ratings?.length ?? 0}>评分</FilterLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {RATING_ORDER.map((r) => {
+              const active = (filters.ratings ?? []).includes(r)
+              const { bg, color, border } = getRatingStyle(r)
+              return (
+                <button
+                  key={r}
+                  onClick={() => toggleRating(r)}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    background: active ? bg : 'var(--fm-muted)',
+                    color: active ? color : 'var(--fm-ink-3)',
+                    border: active ? `1.5px solid ${border}` : '1.5px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {r}
                 </button>
               )
             })}

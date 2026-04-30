@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Tag, Restaurant, RestaurantStatus } from '@/lib/types'
+import type { Tag, Restaurant, RestaurantStatus, RestaurantRating } from '@/lib/types'
+import { RATING_ORDER } from '@/lib/types'
 import TagInput from '@/components/tags/TagInput'
 
 interface Props {
@@ -37,8 +38,43 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     restaurant?.tags.filter((t) => t.type === 'scene').map((t) => t.id) ?? []
   )
   const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
+  const [rating, setRating] = useState<RestaurantRating>(restaurant?.rating ?? '未评分')
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
+
+  const [chainSearchOpen, setChainSearchOpen] = useState(false)
+  const [chainQuery, setChainQuery] = useState('')
+  const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
+  const [chainLoaded, setChainLoaded] = useState(false)
+
+  const chainResults = chainQuery.trim()
+    ? allRestaurants.filter((r) => r.name.includes(chainQuery.trim()))
+    : []
+
+  async function openChainSearch() {
+    setChainSearchOpen(true)
+    if (!chainLoaded) {
+      const res = await fetch('/api/restaurants')
+      const data: Restaurant[] = await res.json()
+      setAllRestaurants(data)
+      setChainLoaded(true)
+    }
+  }
+
+  function applyChainTemplate(r: Restaurant) {
+    setName(r.name)
+    setNotes(r.notes ?? '')
+    setSignatureDishes(r.signature_dishes)
+    setCostRange([r.cost_min ?? 0, r.cost_max ?? MAX_COST])
+    setStatus(r.status)
+    setRating(r.rating)
+    setCuisineTagIds(r.tags.filter((t) => t.type === 'cuisine').map((t) => t.id))
+    setDishTagIds(r.tags.filter((t) => t.type === 'dish').map((t) => t.id))
+    setTasteTagIds(r.tags.filter((t) => t.type === 'taste').map((t) => t.id))
+    setSceneTagIds(r.tags.filter((t) => t.type === 'scene').map((t) => t.id))
+    setChainSearchOpen(false)
+    setChainQuery('')
+  }
 
   const [searchQuery, setSearchQuery] = useState('')
   const [geoResults, setGeoResults] = useState<{ address: string; postal_code: string; lng: number; lat: number }[]>([])
@@ -84,6 +120,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           notes: notes || null,
           signature_dishes: signatureDishes,
           status,
+          rating,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
           taste_tag_ids: tasteTagIds,
@@ -144,12 +181,32 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         {/* Scrollable body */}
         <div className="fm-modal-body flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
           {/* Name + Address row */}
-          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <FmInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="餐馆名称 *"
-            />
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: chainSearchOpen ? 6 : 14 }}>
+            <div>
+              <FmInput
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="餐馆名称 *"
+              />
+              {!restaurant && !chainSearchOpen && (
+                <button
+                  onClick={openChainSearch}
+                  style={{
+                    marginTop: 5,
+                    fontSize: 12,
+                    color: 'var(--fm-orange-dark)',
+                    fontFamily: 'var(--font-geist-mono)',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  连锁分店，从已有店复制 →
+                </button>
+              )}
+            </div>
             <div className="relative">
               <FmInput
                 value={searchQuery}
@@ -185,6 +242,67 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               )}
             </div>
           </div>
+
+          {/* Chain restaurant copy search */}
+          {chainSearchOpen && (
+            <div style={{ marginBottom: 14, position: 'relative' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <FmInput
+                    value={chainQuery}
+                    onChange={(e) => setChainQuery(e.target.value)}
+                    placeholder="搜索已有餐馆名称…"
+                  />
+                  {chainResults.length > 0 && (
+                    <div
+                      className="absolute top-full left-0 right-0 z-20 rounded-lg overflow-hidden"
+                      style={{
+                        border: '1px solid var(--fm-line-2)',
+                        background: 'var(--fm-paper)',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                        marginTop: 4,
+                        maxHeight: 180,
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {chainResults.map((r) => (
+                        <button
+                          key={r.id}
+                          className="w-full text-left px-3 py-2.5 text-base transition-colors"
+                          style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--fm-muted)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                          onClick={() => applyChainTemplate(r)}
+                        >
+                          <span style={{ fontWeight: 500 }}>{r.name}</span>
+                          {r.tags.filter((t) => t.type === 'cuisine').length > 0 && (
+                            <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)' }}>
+                              {r.tags.filter((t) => t.type === 'cuisine').map((t) => t.name).join(' · ')}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setChainSearchOpen(false); setChainQuery('') }}
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--fm-ink-4)',
+                    fontFamily: 'var(--font-geist-mono)',
+                    background: 'none',
+                    border: 'none',
+                    padding: '0 4px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
 
           {address ? (
             <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
@@ -301,38 +419,69 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </div>
           </FormSection>
 
-          {/* Status */}
-          <FormSection label="状态">
-            <div style={{ display: 'flex', gap: 6 }}>
-              {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => setStatus(val)}
-                  style={{
-                    flex: 1,
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    border: status === val
-                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
-                      : '1px solid var(--fm-line-2)',
-                    background: status === val
-                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
-                      : 'var(--fm-paper)',
-                    color: status === val
-                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
-                      : 'var(--fm-ink-3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </FormSection>
+          {/* Status + Rating row */}
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
+            <FormSection label="状态" noMargin>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setStatus(val)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 0',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      border: status === val
+                        ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                        : '1px solid var(--fm-line-2)',
+                      background: status === val
+                        ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                        : 'var(--fm-paper)',
+                      color: status === val
+                        ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                        : 'var(--fm-ink-3)',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </FormSection>
+
+            <FormSection label="评分" noMargin>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {RATING_ORDER.map((r) => {
+                  const { bg, color, border } = getRatingStyle(r)
+                  const active = rating === r
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setRating(r)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 7,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-geist-sans)',
+                        background: active ? bg : 'var(--fm-paper)',
+                        color: active ? color : 'var(--fm-ink-3)',
+                        border: active ? `1.5px solid ${border}` : '1px solid var(--fm-line-2)',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {r}
+                    </button>
+                  )
+                })}
+              </div>
+            </FormSection>
+          </div>
 
           {/* Notes */}
           <FormSection label="笔记">
@@ -401,6 +550,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
       </div>
     </div>
   )
+}
+
+export function getRatingStyle(rating: string): { bg: string; color: string; border: string } {
+  switch (rating) {
+    case '夯':    return { bg: '#fee2e2', color: '#dc2626', border: '#dc2626' }
+    case '顶级':  return { bg: '#fef3c7', color: '#d97706', border: '#d97706' }
+    case '人上人': return { bg: '#ede9fe', color: '#7c3aed', border: '#7c3aed' }
+    case 'NPC':   return { bg: '#f3f4f6', color: '#6b7280', border: '#9ca3af' }
+    case '拉完了': return { bg: '#e5e7eb', color: '#374151', border: '#6b7280' }
+    default:      return { bg: 'var(--fm-muted)', color: 'var(--fm-ink-4)', border: 'var(--fm-line-2)' }
+  }
 }
 
 function FmInput({ value, onChange, onKeyDown, placeholder }: {

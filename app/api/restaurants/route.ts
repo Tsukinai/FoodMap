@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
   const maxCost = searchParams.get('max_cost') ? Number(searchParams.get('max_cost')) : null
   const minCost = searchParams.get('min_cost') ? Number(searchParams.get('min_cost')) : null
   const statusFilter = searchParams.get('status')?.split(',').filter(Boolean) ?? []
+  const ratingsFilter = searchParams.get('ratings')?.split(',').filter(Boolean) ?? []
 
   const supabase = await createClient()
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, name, address, postal_code,
       location,
-      cost_min, cost_max, notes, signature_dishes, status, created_at, updated_at,
+      cost_min, cost_max, notes, signature_dishes, status, rating, created_at, updated_at,
       restaurant_tags (
         tags ( id, name, type )
       )
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
       location: undefined,
       signature_dishes: r.signature_dishes ?? [],
       status: r.status ?? 'visited',
+      rating: r.rating ?? '未评分',
       tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
       restaurant_tags: undefined,
     }
@@ -95,6 +97,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  if (ratingsFilter.length > 0) {
+    results = results.filter((r: any) => ratingsFilter.includes(r.rating))
+  }
+
   return NextResponse.json(results)
 }
 
@@ -103,7 +109,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, status, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
+  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, status, rating, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
 
   if (!name || typeof lng !== 'number' || typeof lat !== 'number') {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -123,6 +129,7 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       signature_dishes: signature_dishes ?? [],
       status: status ?? 'visited',
+      rating: rating ?? '未评分',
     })
     .select('id')
     .single()

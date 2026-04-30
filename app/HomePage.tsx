@@ -30,6 +30,7 @@ const DEFAULT_FILTERS: FilterPayload = {
   max_cost: null,
   min_cost: null,
   status: [],
+  ratings: [],
 }
 
 export default function HomePage() {
@@ -81,6 +82,7 @@ export default function HomePage() {
     if (filters.max_cost) params.set('max_cost', String(filters.max_cost))
     if (filters.min_cost) params.set('min_cost', String(filters.min_cost))
     if (filters.status?.length === 1) params.set('status', filters.status[0])
+    if (filters.ratings?.length > 0) params.set('ratings', filters.ratings.join(','))
 
     try {
       const res = await fetch(`/api/restaurants?${params}`)

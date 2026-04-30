@@ -54,7 +54,7 @@ export default function AuthButton({ user }: Props) {
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
       }}
     >
-      登录编辑
+      登录留言
     </button>
   )
 }

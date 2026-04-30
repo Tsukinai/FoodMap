@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Restaurant } from '@/lib/types'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { getRatingStyle } from '@/components/map/AddPinModal'
 import EditPinModal from '@/components/map/EditPinModal'
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20]
@@ -311,16 +312,38 @@ function RestaurantCard({
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Name row */}
         <div className="flex items-start justify-between gap-2">
-          <div
-            style={{
-              fontFamily: 'var(--font-geist-sans)',
-              fontWeight: 600,
-              fontSize: 15,
-              color: 'var(--fm-ink)',
-              lineHeight: 1.3,
-            }}
-          >
-            {r.name}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-geist-sans)',
+                fontWeight: 600,
+                fontSize: 15,
+                color: 'var(--fm-ink)',
+                lineHeight: 1.3,
+              }}
+            >
+              {r.name}
+            </span>
+            {r.rating && r.rating !== '未评分' && (() => {
+              const { bg, color, border } = getRatingStyle(r.rating)
+              return (
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontWeight: 600,
+                    padding: '1px 6px',
+                    borderRadius: 99,
+                    flexShrink: 0,
+                    background: bg,
+                    color,
+                    border: `1px solid ${border}`,
+                  }}
+                >
+                  {r.rating}
+                </span>
+              )
+            })()}
           </div>
           {priceLabel && (
             <span
