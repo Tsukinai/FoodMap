@@ -50,8 +50,6 @@ export interface FilterPayload {
   scene_tags: string[]
   max_cost: number | null
   min_cost: number | null
-  area_keyword: string | null
-  regions: string[]
   status: RestaurantStatus[]
 }
 

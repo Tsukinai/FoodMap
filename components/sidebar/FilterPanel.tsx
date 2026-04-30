@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
 import {
-  BROAD_REGIONS,
   CUISINE_COLORS,
   CUISINE_BG,
   PRESET_TASTE_TAGS,
@@ -13,7 +11,6 @@ import {
   PRESET_DISH_TYPE_TAGS,
 } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
-import SmartSearchBar from './SmartSearchBar'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -85,13 +82,6 @@ export default function FilterPanel({
     onChange({ ...filters, [key]: arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name] })
   }
 
-  function toggleRegion(region: string) {
-    const next = filters.regions.includes(region)
-      ? filters.regions.filter((r) => r !== region)
-      : [...filters.regions, region]
-    onChange({ ...filters, regions: next })
-  }
-
   function handleCostMin(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value === '' ? null : Math.max(0, Number(e.target.value))
     onChange({ ...filters, min_cost: v })
@@ -116,8 +106,6 @@ export default function FilterPanel({
       scene_tags:   [],
       max_cost:     null,
       min_cost:     null,
-      area_keyword: null,
-      regions:      [],
       status:       [],
     })
   }
@@ -129,8 +117,6 @@ export default function FilterPanel({
     (filters.scene_tags?.length ?? 0) > 0 ||
     filters.max_cost !== null ||
     filters.min_cost !== null ||
-    filters.area_keyword !== null ||
-    filters.regions.length > 0 ||
     (filters.status?.length ?? 0) > 0
 
   // ── Shared input style ───────────────────────────────────────────────────
@@ -200,12 +186,6 @@ export default function FilterPanel({
           )}
           </div>
         </div>
-
-        {/* Smart search */}
-        <SmartSearchBar
-          allTags={allTags}
-          onFilter={(payload) => onChange({ ...filters, ...payload })}
-        />
 
         {/* View mode toggle */}
         {onViewModeChange && (
@@ -301,24 +281,6 @@ export default function FilterPanel({
                 </button>
               )
             })}
-          </div>
-        </section>
-
-        {/* ── Region ── */}
-        <section>
-          <FilterLabel count={filters.regions.length}>区域</FilterLabel>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
-            {BROAD_REGIONS.map((r) => (
-              <button
-                key={r}
-                className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
-                style={{ fontSize: 12, padding: '6px 4px' }}
-                onClick={() => toggleRegion(r)}
-              >
-                {r}
-              </button>
-            ))}
           </div>
         </section>
 

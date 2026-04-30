@@ -27,8 +27,6 @@ const DEFAULT_FILTERS: FilterPayload = {
   scene_tags: [],
   max_cost: null,
   min_cost: null,
-  area_keyword: null,
-  regions: [],
   status: [],
 }
 
@@ -68,8 +66,6 @@ export default function HomePage() {
     if (filters.scene_tags?.length > 0) params.set('scene_tags', filters.scene_tags.join(','))
     if (filters.max_cost) params.set('max_cost', String(filters.max_cost))
     if (filters.min_cost) params.set('min_cost', String(filters.min_cost))
-    if (filters.area_keyword) params.set('area_keyword', filters.area_keyword)
-    if (filters.regions.length > 0) params.set('regions', filters.regions.join(','))
     if (filters.status?.length === 1) params.set('status', filters.status[0])
 
     try {

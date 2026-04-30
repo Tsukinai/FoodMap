@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
-import { REGION_BOUNDS } from '@/lib/constants'
 
 function parseEWKBPoint(hex: string): [number, number] | null {
   try {
@@ -25,8 +24,6 @@ export async function GET(request: NextRequest) {
   const sceneTags = searchParams.get('scene_tags')?.split(',').filter(Boolean) ?? []
   const maxCost = searchParams.get('max_cost') ? Number(searchParams.get('max_cost')) : null
   const minCost = searchParams.get('min_cost') ? Number(searchParams.get('min_cost')) : null
-  const regions = searchParams.get('regions')?.split(',').filter(Boolean) ?? []
-  const areaKeyword = searchParams.get('area_keyword') ?? null
   const statusFilter = searchParams.get('status')?.split(',').filter(Boolean) ?? []
 
   const supabase = await createClient()
@@ -44,7 +41,6 @@ export async function GET(request: NextRequest) {
 
   if (maxCost !== null) query = query.lte('cost_max', maxCost)
   if (minCost !== null) query = query.gte('cost_min', minCost)
-  if (areaKeyword) query = query.ilike('address', `%${areaKeyword}%`)
   if (statusFilter.length === 1) query = query.eq('status', statusFilter[0])
 
   const { data, error } = await query.order('created_at', { ascending: false })
@@ -97,19 +93,6 @@ export async function GET(request: NextRequest) {
         r.tags.some((t: any) => t.name === name && t.type === 'scene')
       )
     )
-  }
-
-  if (regions.length > 0) {
-    results = results.filter((r: any) => {
-      const lng = r.location_lng
-      const lat = r.location_lat
-      return regions.some((region) => {
-        const bounds = REGION_BOUNDS[region]
-        if (!bounds) return false
-        const [west, south, east, north] = bounds
-        return lng >= west && lng <= east && lat >= south && lat <= north
-      })
-    })
   }
 
   return NextResponse.json(results)

@@ -207,7 +207,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleGeoSearch()}
-                placeholder="邮编 / 地址搜索"
+                placeholder="邮编 / 地址搜索 *"
               />
               {geoResults.length > 0 && (
                 <div
@@ -238,9 +238,13 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </div>
           </div>
 
-          {address && (
+          {address ? (
             <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
               {address}{postalCode ? ` · ${postalCode}` : ''}
+            </p>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
+              请搜索并从下拉列表中选择地址
             </p>
           )}
 
@@ -436,17 +440,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !name.trim()}
+              disabled={saving || !name.trim() || !address.trim()}
               style={{
                 padding: '10px 18px',
                 borderRadius: 8,
                 fontSize: 13.5,
                 fontWeight: 500,
                 border: '1px solid var(--fm-orange)',
-                background: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
-                borderColor: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                background: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                borderColor: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
                 color: '#fff',
-                cursor: saving || !name.trim() ? 'default' : 'pointer',
+                cursor: saving || !name.trim() || !address.trim() ? 'default' : 'pointer',
                 fontFamily: 'var(--font-geist-sans)',
                 boxShadow: '0 4px 10px rgba(217,107,44,0.25)',
               }}
