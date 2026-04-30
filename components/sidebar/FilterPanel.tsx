@@ -476,14 +476,14 @@ export default function FilterPanel({
                   fontWeight: 600,
                 }}
               >
-                {user.email?.slice(0, 2).toUpperCase()}
+                {(user.user_metadata?.full_name ?? user.email ?? '').slice(0, 2).toUpperCase()}
               </div>
             )}
             <span
               className="flex-1 truncate"
               style={{ fontSize: 11.5, color: 'var(--fm-ink-3)' }}
             >
-              {user.email}
+              {user.user_metadata?.full_name ?? user.email}
             </span>
             <button
               onClick={signOut}
