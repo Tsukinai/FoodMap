@@ -419,39 +419,6 @@ export default function FilterPanel({
           </div>
         </section>
 
-        {/* ── Cost range ── */}
-        <section>
-          <FilterLabel count={(filters.min_cost || filters.max_cost) ? 1 : 0} countLabel="已设">
-            人均消费 (S$)
-          </FilterLabel>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="number"
-              value={filters.min_cost ?? ''}
-              onChange={handleCostMin}
-              placeholder="下限"
-              min={0}
-              max={MAX_COST}
-              style={costInputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-            />
-            <span style={{ color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', fontSize: 13 }}>–</span>
-            <input
-              type="number"
-              value={filters.max_cost ?? ''}
-              onChange={handleCostMax}
-              placeholder="上限"
-              min={0}
-              max={MAX_COST}
-              style={costInputStyle}
-              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-            />
-            <span style={{ fontSize: 11, color: 'var(--fm-ink-4)', whiteSpace: 'nowrap' }}>每人</span>
-          </div>
-        </section>
-
         {/* ── Taste ── */}
         <section>
           <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
