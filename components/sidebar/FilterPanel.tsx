@@ -15,8 +15,8 @@ interface Props {
   user: User | null
   isOwner: boolean
   onCollapse?: () => void
-  viewMode?: 'map' | 'list'
-  onViewModeChange?: (mode: 'map' | 'list') => void
+  viewMode?: 'map' | 'list' | 'guestbook'
+  onViewModeChange?: (mode: 'map' | 'list' | 'guestbook') => void
 }
 
 const MAX_COST = 300
@@ -29,7 +29,7 @@ export default function FilterPanel({
   user,
   isOwner,
   onCollapse,
-  viewMode = 'map',
+  viewMode = 'map' as 'map' | 'list' | 'guestbook',
   onViewModeChange,
 }: Props) {
   const supabase = createClient()
@@ -191,7 +191,7 @@ export default function FilterPanel({
               gap: 2,
             }}
           >
-            {(['map', 'list'] as const).map((mode) => (
+            {(['map', 'list', 'guestbook'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => onViewModeChange(mode)}
@@ -220,7 +220,7 @@ export default function FilterPanel({
                     <line x1="9" y1="3" x2="9" y2="18"/>
                     <line x1="15" y1="6" x2="15" y2="21"/>
                   </svg>
-                ) : (
+                ) : mode === 'list' ? (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="8" y1="6" x2="21" y2="6"/>
                     <line x1="8" y1="12" x2="21" y2="12"/>
@@ -229,8 +229,12 @@ export default function FilterPanel({
                     <line x1="3" y1="12" x2="3.01" y2="12"/>
                     <line x1="3" y1="18" x2="3.01" y2="18"/>
                   </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
                 )}
-                {mode === 'map' ? '地图' : '列表'}
+                {mode === 'map' ? '地图' : mode === 'list' ? '列表' : '留言'}
               </button>
             ))}
           </div>
@@ -563,7 +567,7 @@ export default function FilterPanel({
               fontFamily: 'var(--font-geist-sans)',
             }}
           >
-            登录编辑
+            登录留言
           </button>
         )}
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   DndContext,
   closestCenter,
@@ -32,15 +32,48 @@ interface AddingState {
   parentId: string | null
 }
 
+function makeTmpId() {
+  return `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function getGroupKey(t: Tag) {
+  return `${t.type}::${t.parent_id ?? ''}`
+}
+
+function computeIsDirty(current: Tag[], saved: Tag[]): boolean {
+  if (current.some(t => t.id.startsWith('tmp-'))) return true
+  if (saved.some(st => !current.find(t => t.id === st.id))) return true
+  if (current.some(t => !t.id.startsWith('tmp-') && !saved.find(s => s.id === t.id))) return true
+
+  for (const t of current) {
+    const s = saved.find(s => s.id === t.id)
+    if (s && s.name !== t.name) return true
+  }
+
+  const allKeys = new Set([...current, ...saved].map(getGroupKey))
+  for (const key of allKeys) {
+    const currIds = current.filter(t => getGroupKey(t) === key).map(t => t.id)
+    const savedIds = saved.filter(t => getGroupKey(t) === key).map(t => t.id)
+    if (currIds.join(',') !== savedIds.join(',')) return true
+  }
+
+  return false
+}
+
 export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
+  const router = useRouter()
   const [tags, setTags] = useState<Tag[]>(initialTags)
+  const savedTagsRef = useRef<Tag[]>(initialTags)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [adding, setAdding] = useState<AddingState | null>(null)
   const [newName, setNewName] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const editRef = useRef<HTMLInputElement>(null)
   const addRef = useRef<HTMLInputElement>(null)
+
+  const isDirty = computeIsDirty(tags, savedTagsRef.current)
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -50,53 +83,65 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
   useEffect(() => { editRef.current?.focus() }, [editingId])
   useEffect(() => { addRef.current?.focus() }, [adding])
 
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (isDirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
+
+  function handleBackClick() {
+    if (isDirty && !confirm('有未保存的更改，确认放弃并返回？')) return
+    router.push('/')
+  }
+
+  function handleDiscard() {
+    if (!confirm('放弃所有未保存的更改？')) return
+    setTags(savedTagsRef.current)
+    setEditingId(null)
+    setAdding(null)
+    setNewName('')
+    setSaveError(null)
+  }
+
   function startEdit(tag: Tag) {
     setAdding(null)
     setEditingId(tag.id)
     setEditingName(tag.name)
   }
 
-  async function commitRename(tag: Tag) {
+  function commitRename(tag: Tag) {
     const trimmed = editingName.trim()
     setEditingId(null)
     if (!trimmed || trimmed === tag.name) return
-    setBusy(true)
-    const res = await fetch(`/api/tags/${tag.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: trimmed }),
-    })
-    if (res.ok) {
-      const updated: Tag = await res.json()
-      setTags(prev => prev.map(t => t.id === tag.id ? updated : t))
-    }
-    setBusy(false)
+    setTags(prev => prev.map(t => t.id === tag.id ? { ...t, name: trimmed } : t))
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('确认删除此标签？删除后所有关联餐厅的该标签也会移除。')) return
-    setBusy(true)
-    const res = await fetch(`/api/tags/${id}`, { method: 'DELETE' })
-    if (res.ok) setTags(prev => prev.filter(t => t.id !== id))
-    setBusy(false)
+  function handleDelete(id: string) {
+    const isTmp = id.startsWith('tmp-')
+    if (!isTmp && !confirm('确认删除此标签？保存后关联餐厅的该标签也会移除。')) return
+    setTags(prev => prev.filter(t => t.id !== id && t.parent_id !== id))
   }
 
-  async function commitAdd(type: TagType, parentId: string | null) {
+  function commitAdd(type: TagType, parentId: string | null) {
     const trimmed = newName.trim()
     setAdding(null)
     setNewName('')
     if (!trimmed) return
-    setBusy(true)
-    const res = await fetch('/api/tags', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: trimmed, type, parent_id: parentId }),
-    })
-    if (res.ok) {
-      const created: Tag = await res.json()
-      setTags(prev => [...prev, created])
+    const id = makeTmpId()
+    const newTag: Tag = {
+      id,
+      name: trimmed,
+      type,
+      parent_id: parentId,
+      sort_order: tags.filter(t => t.type === type && t.parent_id === parentId).length,
+      created_at: new Date().toISOString(),
     }
-    setBusy(false)
+    setTags(prev => [...prev, newTag])
   }
 
   function makeDragHandler(type: TagType, parentId: string | null, groupTags: Tag[]) {
@@ -111,11 +156,95 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
         ...prev.filter(t => !(t.type === type && t.parent_id === parentId)),
         ...reordered,
       ])
-      fetch('/api/tags/reorder', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: reordered.map(t => t.id) }),
-      })
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const saved = savedTagsRef.current
+
+      // 1. Delete removed saved tags
+      const deletedIds = saved
+        .filter(st => !tags.find(t => t.id === st.id))
+        .map(t => t.id)
+      await Promise.all(deletedIds.map(id =>
+        fetch(`/api/tags/${id}`, { method: 'DELETE' })
+      ))
+
+      // 2. Create new tags (top-level first, then children with tmp parents)
+      const tmpToReal = new Map<string, string>()
+      const created = tags.filter(t => t.id.startsWith('tmp-'))
+      const topLevelNew = created.filter(t => !t.parent_id?.startsWith('tmp-'))
+      const childNew = created.filter(t => t.parent_id?.startsWith('tmp-'))
+
+      for (const tag of topLevelNew) {
+        const res = await fetch('/api/tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: tag.name, type: tag.type, parent_id: tag.parent_id }),
+        })
+        if (res.ok) {
+          const t: Tag = await res.json()
+          tmpToReal.set(tag.id, t.id)
+        }
+      }
+
+      for (const tag of childNew) {
+        const realParentId = tmpToReal.get(tag.parent_id!) ?? tag.parent_id
+        const res = await fetch('/api/tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: tag.name, type: tag.type, parent_id: realParentId }),
+        })
+        if (res.ok) {
+          const t: Tag = await res.json()
+          tmpToReal.set(tag.id, t.id)
+        }
+      }
+
+      // 3. Rename changed tags
+      const renamedTags = tags.filter(t =>
+        !t.id.startsWith('tmp-') &&
+        saved.find(st => st.id === t.id && st.name !== t.name)
+      )
+      await Promise.all(renamedTags.map(tag =>
+        fetch(`/api/tags/${tag.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: tag.name }),
+        })
+      ))
+
+      // 4. Build final tag list with real IDs
+      const finalTags = tags.map(t => ({
+        ...t,
+        id: tmpToReal.get(t.id) ?? t.id,
+        parent_id: t.parent_id ? (tmpToReal.get(t.parent_id) ?? t.parent_id) : null,
+      }))
+
+      // 5. Reorder each group
+      const groups = new Map<string, string[]>()
+      for (const t of finalTags) {
+        const key = getGroupKey(t)
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(t.id)
+      }
+      await Promise.all([...groups.values()].map(ids =>
+        fetch('/api/tags/reorder', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        })
+      ))
+
+      setTags(finalTags)
+      savedTagsRef.current = finalTags
+    } catch {
+      setSaveError('保存失败，请重试')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -131,17 +260,76 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
           display: 'flex',
           alignItems: 'center',
           gap: 16,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}
       >
-        <Link href="/" style={{ fontSize: 13, color: 'var(--fm-ink-3)', textDecoration: 'none' }}>
+        <button
+          onClick={handleBackClick}
+          style={{ fontSize: 13, color: 'var(--fm-ink-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
           ← 返回地图
-        </Link>
+        </button>
         <span style={{ color: 'var(--fm-line-2)' }}>|</span>
         <span style={{ fontSize: 15, fontWeight: 600 }}>标签管理</span>
-        {busy && <span style={{ fontSize: 12, color: 'var(--fm-ink-4)', marginLeft: 'auto' }}>保存中…</span>}
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {saveError && (
+            <span style={{ fontSize: 12, color: '#c0392b' }}>{saveError}</span>
+          )}
+          {isDirty && !saving && (
+            <button
+              onClick={handleDiscard}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 6,
+                border: '1px solid var(--fm-line-2)',
+                background: 'transparent',
+                color: 'var(--fm-ink-3)',
+                fontSize: 12.5,
+                cursor: 'pointer',
+              }}
+            >
+              放弃更改
+            </button>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={!isDirty || saving}
+            style={{
+              padding: '5px 14px',
+              borderRadius: 6,
+              border: 'none',
+              background: isDirty ? 'var(--fm-orange)' : 'var(--fm-line)',
+              color: isDirty ? '#fff' : 'var(--fm-ink-4)',
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: isDirty && !saving ? 'pointer' : 'default',
+              transition: 'background 0.15s',
+              minWidth: 56,
+            }}
+          >
+            {saving ? '保存中…' : '保存'}
+          </button>
+        </div>
       </header>
 
       <main style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px' }}>
+        {isDirty && (
+          <div style={{
+            marginBottom: 20,
+            padding: '8px 14px',
+            borderRadius: 8,
+            background: 'rgba(var(--fm-orange-rgb, 230, 126, 34), 0.08)',
+            border: '1px solid var(--fm-orange)',
+            fontSize: 12.5,
+            color: 'var(--fm-ink-2)',
+          }}>
+            有未保存的更改 — 点击右上角"保存"持久化，或"放弃更改"撤销。
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {SECTIONS.map(({ type, label, accent, bg, supportsChildren }) => {
             const sectionTags = tags.filter(t => t.type === type)
@@ -164,7 +352,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                       {sectionTags.length}
                     </span>
                   </div>
-                  <AddBtn accent={accent} busy={busy} onClick={() => { setAdding({ type, parentId: null }); setNewName('') }} />
+                  <AddBtn accent={accent} busy={saving} onClick={() => { setAdding({ type, parentId: null }); setNewName('') }} />
                 </div>
 
                 {/* Tag box */}
@@ -199,7 +387,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                             editingId={editingId}
                             editingName={editingName}
                             editRef={editRef}
-                            busy={busy}
+                            busy={saving}
                             onEdit={startEdit}
                             onEditNameChange={setEditingName}
                             onRename={commitRename}
@@ -248,7 +436,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                                   editingId={editingId}
                                   editingName={editingName}
                                   editRef={editRef}
-                                  busy={busy}
+                                  busy={saving}
                                   onEdit={startEdit}
                                   onEditNameChange={setEditingName}
                                   onRename={commitRename}
@@ -280,7 +468,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                         <button
                           key={parent.id}
                           onClick={() => { setAdding({ type, parentId: parent.id }); setNewName('') }}
-                          disabled={busy}
+                          disabled={saving}
                           style={{
                             padding: '3px 8px',
                             borderRadius: 6,
@@ -289,7 +477,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                             color: accent,
                             fontSize: 11.5,
                             cursor: 'pointer',
-                            opacity: busy ? 0.5 : 1,
+                            opacity: saving ? 0.5 : 1,
                           }}
                         >
                           + {parent.name} 子类
@@ -375,6 +563,7 @@ function TagChip({
   onEdit, onEditNameChange, onRename, onCancelEdit, onDelete,
 }: TagChipProps) {
   const isEditing = editingId === tag.id
+  const isTmp = tag.id.startsWith('tmp-')
   const pad = small ? '3px 7px' : '5px 8px'
   const fontSize = small ? 11.5 : 12.5
 
@@ -385,7 +574,7 @@ function TagChip({
         alignItems: 'center',
         borderRadius: 8,
         background: bg,
-        border: '1px solid var(--fm-line)',
+        border: isTmp ? '1px dashed var(--fm-line-2)' : '1px solid var(--fm-line)',
         overflow: 'hidden',
       }}
     >
@@ -421,7 +610,7 @@ function TagChip({
             fontWeight: 500,
             background: 'transparent',
             border: 'none',
-            color: 'var(--fm-ink-2)',
+            color: isTmp ? 'var(--fm-ink-3)' : 'var(--fm-ink-2)',
             cursor: 'text',
           }}
         >
