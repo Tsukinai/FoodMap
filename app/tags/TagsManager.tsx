@@ -1,7 +1,22 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { Tag, TagType } from '@/lib/types'
 
 const SECTIONS: { type: TagType; label: string; accent: string; bg: string; supportsChildren: boolean }[] = [
@@ -25,6 +40,10 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
   const [busy, setBusy] = useState(false)
   const editRef = useRef<HTMLInputElement>(null)
   const addRef = useRef<HTMLInputElement>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   useEffect(() => { editRef.current?.focus() }, [editingId])
   useEffect(() => { addRef.current?.focus() }, [adding])
@@ -76,6 +95,26 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
       setTags(prev => [...prev, created])
     }
     setBusy(false)
+  }
+
+  function makeDragHandler(type: TagType, parentId: string | null, groupTags: Tag[]) {
+    return (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+      const oldIndex = groupTags.findIndex(t => t.id === active.id)
+      const newIndex = groupTags.findIndex(t => t.id === over.id)
+      if (oldIndex === -1 || newIndex === -1) return
+      const reordered = arrayMove(groupTags, oldIndex, newIndex)
+      setTags(prev => [
+        ...prev.filter(t => !(t.type === type && t.parent_id === parentId)),
+        ...reordered,
+      ])
+      fetch('/api/tags/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: reordered.map(t => t.id) }),
+      })
+    }
   }
 
   return (
@@ -139,39 +178,47 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                   }}
                 >
                   {/* Top-level tags */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, minHeight: 32 }}>
-                    {topLevel.length === 0 && adding?.type !== type && (
-                      <span style={{ fontSize: 12.5, color: 'var(--fm-ink-4)' }}>暂无标签</span>
-                    )}
-                    {topLevel.map(tag => (
-                      <TagChip
-                        key={tag.id}
-                        tag={tag}
-                        bg={bg}
-                        editingId={editingId}
-                        editingName={editingName}
-                        editRef={editRef}
-                        busy={busy}
-                        onEdit={startEdit}
-                        onEditNameChange={setEditingName}
-                        onRename={commitRename}
-                        onCancelEdit={() => setEditingId(null)}
-                        onDelete={handleDelete}
-                      />
-                    ))}
-                    {adding?.type === type && adding.parentId === null && (
-                      <InlineAddInput
-                        ref={addRef}
-                        value={newName}
-                        onChange={setNewName}
-                        accent={accent}
-                        onCommit={() => commitAdd(type, null)}
-                        onCancel={() => { setAdding(null); setNewName('') }}
-                      />
-                    )}
-                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={makeDragHandler(type, null, topLevel)}
+                  >
+                    <SortableContext items={topLevel.map(t => t.id)} strategy={rectSortingStrategy}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, minHeight: 32 }}>
+                        {topLevel.length === 0 && adding?.type !== type && (
+                          <span style={{ fontSize: 12.5, color: 'var(--fm-ink-4)' }}>暂无标签</span>
+                        )}
+                        {topLevel.map(tag => (
+                          <SortableTagChip
+                            key={tag.id}
+                            tag={tag}
+                            bg={bg}
+                            editingId={editingId}
+                            editingName={editingName}
+                            editRef={editRef}
+                            busy={busy}
+                            onEdit={startEdit}
+                            onEditNameChange={setEditingName}
+                            onRename={commitRename}
+                            onCancelEdit={() => setEditingId(null)}
+                            onDelete={handleDelete}
+                          />
+                        ))}
+                        {adding?.type === type && adding.parentId === null && (
+                          <InlineAddInput
+                            ref={addRef}
+                            value={newName}
+                            onChange={setNewName}
+                            accent={accent}
+                            onCommit={() => commitAdd(type, null)}
+                            onCancel={() => { setAdding(null); setNewName('') }}
+                          />
+                        )}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
 
-                  {/* Sub-tag rows (only for types that support children) */}
+                  {/* Sub-tag rows */}
                   {supportsChildren && topLevel.map(parent => {
                     const children = subByParent[parent.id] ?? []
                     const isAddingHere = adding?.type === type && adding.parentId === parent.id
@@ -181,40 +228,48 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                         <span style={{ fontSize: 11, color: 'var(--fm-ink-4)', display: 'block', marginBottom: 6 }}>
                           {parent.name} 子类
                         </span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {children.map(tag => (
-                            <TagChip
-                              key={tag.id}
-                              tag={tag}
-                              bg={bg}
-                              small
-                              editingId={editingId}
-                              editingName={editingName}
-                              editRef={editRef}
-                              busy={busy}
-                              onEdit={startEdit}
-                              onEditNameChange={setEditingName}
-                              onRename={commitRename}
-                              onCancelEdit={() => setEditingId(null)}
-                              onDelete={handleDelete}
-                            />
-                          ))}
-                          {isAddingHere && (
-                            <InlineAddInput
-                              ref={addRef}
-                              value={newName}
-                              onChange={setNewName}
-                              accent={accent}
-                              onCommit={() => commitAdd(type, parent.id)}
-                              onCancel={() => { setAdding(null); setNewName('') }}
-                            />
-                          )}
-                        </div>
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={makeDragHandler(type, parent.id, children)}
+                        >
+                          <SortableContext items={children.map(t => t.id)} strategy={rectSortingStrategy}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {children.map(tag => (
+                                <SortableTagChip
+                                  key={tag.id}
+                                  tag={tag}
+                                  bg={bg}
+                                  small
+                                  editingId={editingId}
+                                  editingName={editingName}
+                                  editRef={editRef}
+                                  busy={busy}
+                                  onEdit={startEdit}
+                                  onEditNameChange={setEditingName}
+                                  onRename={commitRename}
+                                  onCancelEdit={() => setEditingId(null)}
+                                  onDelete={handleDelete}
+                                />
+                              ))}
+                              {isAddingHere && (
+                                <InlineAddInput
+                                  ref={addRef}
+                                  value={newName}
+                                  onChange={setNewName}
+                                  accent={accent}
+                                  onCommit={() => commitAdd(type, parent.id)}
+                                  onCancel={() => { setAdding(null); setNewName('') }}
+                                />
+                              )}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       </div>
                     )
                   })}
 
-                  {/* "Add sub-tag" buttons for top-level parents */}
+                  {/* "Add sub-tag" buttons */}
                   {supportsChildren && topLevel.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, borderTop: '1px dashed var(--fm-line)', paddingTop: 10 }}>
                       {topLevel.map(parent => (
@@ -241,7 +296,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
                 </div>
 
                 <p style={{ marginTop: 6, fontSize: 11, color: 'var(--fm-ink-4)' }}>
-                  点击标签名可重命名，× 删除
+                  拖动排序 · 点击名称重命名 · × 删除
                 </p>
               </section>
             )
@@ -276,10 +331,7 @@ function AddBtn({ accent, busy, onClick }: { accent: string; busy: boolean; onCl
   )
 }
 
-function TagChip({
-  tag, bg, small = false, editingId, editingName, editRef, busy,
-  onEdit, onEditNameChange, onRename, onCancelEdit, onDelete,
-}: {
+interface TagChipProps {
   tag: Tag
   bg: string
   small?: boolean
@@ -292,7 +344,32 @@ function TagChip({
   onRename: (tag: Tag) => void
   onCancelEdit: () => void
   onDelete: (id: string) => void
-}) {
+}
+
+function SortableTagChip(props: TagChipProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.tag.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <TagChip {...props} />
+    </div>
+  )
+}
+
+function TagChip({
+  tag, bg, small = false, editingId, editingName, editRef, busy,
+  onEdit, onEditNameChange, onRename, onCancelEdit, onDelete,
+}: TagChipProps) {
   const isEditing = editingId === tag.id
   const pad = small ? '3px 7px' : '5px 8px'
   const fontSize = small ? 11.5 : 12.5
@@ -373,8 +450,6 @@ function TagChip({
     </div>
   )
 }
-
-import React from 'react'
 
 const InlineAddInput = React.forwardRef<HTMLInputElement, {
   value: string

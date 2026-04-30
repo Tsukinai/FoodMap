@@ -5,6 +5,7 @@ export interface Tag {
   name: string
   type: TagType
   parent_id: string | null
+  sort_order: number
   created_at: string
 }
 
