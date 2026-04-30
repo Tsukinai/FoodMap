@@ -149,7 +149,12 @@ export default function HomePage() {
         {/* Main content: map or list */}
         <div className="flex-1 relative">
           {viewMode === 'list' ? (
-            <RestaurantList restaurants={allRestaurants} loading={loading} />
+            <RestaurantList
+              restaurants={allRestaurants}
+              loading={loading}
+              isOwner={isOwner}
+              onSaved={() => { fetchRestaurants(); fetchTags() }}
+            />
           ) : loading ? (
             <div
               className="flex items-center justify-center h-full text-sm"

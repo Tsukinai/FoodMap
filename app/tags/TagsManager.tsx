@@ -5,7 +5,8 @@ import Link from 'next/link'
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -42,7 +43,8 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
   const addRef = useRef<HTMLInputElement>(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
   )
 
   useEffect(() => { editRef.current?.focus() }, [editingId])
@@ -118,7 +120,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--fm-cream)', color: 'var(--fm-ink)', fontFamily: 'var(--font-geist-sans)' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: 'var(--fm-cream)', color: 'var(--fm-ink)', fontFamily: 'var(--font-geist-sans)' }}>
       {/* Header */}
       <header
         style={{
@@ -358,7 +360,7 @@ function SortableTagChip(props: TagChipProps) {
         transition,
         opacity: isDragging ? 0.4 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
-        touchAction: 'none',
+        touchAction: 'manipulation',
       }}
       {...attributes}
       {...listeners}

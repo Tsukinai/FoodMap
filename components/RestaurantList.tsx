@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react'
 import type { Restaurant } from '@/lib/types'
 import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import EditPinModal from '@/components/map/EditPinModal'
 
-const PAGE_SIZE = 6
+const PAGE_SIZE_OPTIONS = [5, 10, 20]
 
 interface Props {
   restaurants: Restaurant[]
   loading?: boolean
+  isOwner?: boolean
+  onSaved?: () => void
 }
 
 function TagBadge({ name, type }: { name: string; type: string }) {
@@ -72,138 +75,204 @@ function getCuisineEmoji(cuisine?: string): string {
   return map[cuisine ?? ''] ?? '🍴'
 }
 
-export default function RestaurantList({ restaurants, loading }: Props) {
+export default function RestaurantList({ restaurants, loading, isOwner, onSaved }: Props) {
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(5)
+  const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
 
   useEffect(() => { setPage(0) }, [restaurants])
+  useEffect(() => { setPage(0) }, [pageSize])
 
-  const totalPages = Math.ceil(restaurants.length / PAGE_SIZE)
-  const pageItems = restaurants.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(restaurants.length / pageSize))
+  const pageItems = restaurants.slice(page * pageSize, (page + 1) * pageSize)
+
+  const btnBase: React.CSSProperties = {
+    fontFamily: 'var(--font-geist-mono)',
+    fontSize: 12,
+    borderRadius: 6,
+    border: '1px solid var(--fm-line)',
+    background: 'var(--fm-paper)',
+    color: 'var(--fm-ink-2)',
+    padding: '2px 7px',
+    cursor: 'pointer',
+    lineHeight: '18px',
+  }
+
+  const header = (
+    <div
+      style={{
+        flexShrink: 0,
+        padding: '10px 16px 10px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        borderBottom: '1px solid var(--fm-line)',
+        background: 'var(--fm-cream)',
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: 'var(--font-instrument-serif)',
+          fontSize: 19,
+          color: 'var(--fm-ink)',
+          margin: 0,
+          flexShrink: 0,
+        }}
+      >
+        全部餐厅
+      </h2>
+
+      <div style={{ flex: 1 }} />
+
+      {/* Page size */}
+      <div style={{ display: 'flex', gap: 2 }}>
+        {PAGE_SIZE_OPTIONS.map((n) => (
+          <button
+            key={n}
+            onClick={() => setPageSize(n)}
+            style={{
+              ...btnBase,
+              background: pageSize === n ? 'var(--fm-ink)' : 'var(--fm-paper)',
+              color: pageSize === n ? 'var(--fm-cream)' : 'var(--fm-ink-3)',
+              borderColor: pageSize === n ? 'var(--fm-ink)' : 'var(--fm-line)',
+            }}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 14, background: 'var(--fm-line-2)', flexShrink: 0 }} />
+
+      {/* Prev */}
+      <button
+        onClick={() => setPage((p) => Math.max(0, p - 1))}
+        disabled={page === 0 || restaurants.length === 0}
+        style={{
+          ...btnBase,
+          padding: '2px 8px',
+          color: page === 0 ? 'var(--fm-ink-4)' : 'var(--fm-ink-2)',
+          cursor: page === 0 ? 'default' : 'pointer',
+        }}
+      >
+        ←
+      </button>
+
+      {/* Page indicator */}
+      <span
+        style={{
+          fontSize: 12,
+          fontFamily: 'var(--font-geist-mono)',
+          color: 'var(--fm-ink-3)',
+          minWidth: 36,
+          textAlign: 'center',
+        }}
+      >
+        {restaurants.length === 0 ? '—' : `${page + 1}/${totalPages}`}
+      </span>
+
+      {/* Next */}
+      <button
+        onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+        disabled={page >= totalPages - 1 || restaurants.length === 0}
+        style={{
+          ...btnBase,
+          padding: '2px 8px',
+          color: page >= totalPages - 1 ? 'var(--fm-ink-4)' : 'var(--fm-ink-2)',
+          cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+        }}
+      >
+        →
+      </button>
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 14, background: 'var(--fm-line-2)', flexShrink: 0 }} />
+
+      {/* Count */}
+      <span
+        style={{
+          fontSize: 12,
+          fontFamily: 'var(--font-geist-mono)',
+          color: 'var(--fm-ink-3)',
+          flexShrink: 0,
+        }}
+      >
+        {restaurants.length} 家
+      </span>
+    </div>
+  )
+
+  const outerStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    background: 'var(--fm-cream)',
+  }
 
   if (loading) {
     return (
-      <div
-        className="flex items-center justify-center h-full text-sm"
-        style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}
-      >
-        加载中…
+      <div style={outerStyle}>
+        {header}
+        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>
+          加载中…
+        </div>
       </div>
     )
   }
 
   if (restaurants.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center h-full gap-2"
-        style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-sans)' }}
-      >
-        <span style={{ fontSize: 32 }}>🍽️</span>
-        <span style={{ fontSize: 14 }}>没有找到符合条件的餐厅</span>
+      <div style={outerStyle}>
+        {header}
+        <div className="flex-1 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-sans)' }}>
+          <span style={{ fontSize: 32 }}>🍽️</span>
+          <span style={{ fontSize: 14 }}>没有找到符合条件的餐厅</span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div
-      className="h-full overflow-y-auto"
-      style={{ background: 'var(--fm-cream)' }}
-    >
-      {/* Header */}
-      <div
-        className="sticky top-0 px-6 py-3 flex items-center justify-between"
-        style={{
-          background: 'var(--fm-cream)',
-          borderBottom: '1px solid var(--fm-line)',
-          zIndex: 1,
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: 'var(--font-instrument-serif)',
-            fontSize: 20,
-            color: 'var(--fm-ink)',
-            margin: 0,
-          }}
-        >
-          全部餐厅
-        </h2>
-        <span
-          style={{
-            fontSize: 13,
-            fontFamily: 'var(--font-geist-mono)',
-            color: 'var(--fm-ink-3)',
-          }}
-        >
-          {restaurants.length === 0
-            ? '0 家'
-            : `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, restaurants.length)} / ${restaurants.length} 家`}
-        </span>
-      </div>
+    <div style={outerStyle}>
+      {header}
 
-      {/* List */}
-      <div className="px-4 py-3 flex flex-col gap-2">
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
         {pageItems.map((r) => (
-          <RestaurantCard key={r.id} restaurant={r} />
+          <RestaurantCard
+            key={r.id}
+            restaurant={r}
+            isOwner={isOwner}
+            onClick={isOwner ? () => setEditRestaurant(r) : undefined}
+          />
         ))}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div
-          className="sticky bottom-0 flex items-center justify-between px-6 py-3"
-          style={{
-            background: 'var(--fm-cream)',
-            borderTop: '1px solid var(--fm-line)',
+      {editRestaurant && (
+        <EditPinModal
+          restaurant={editRestaurant}
+          onClose={() => setEditRestaurant(null)}
+          onSaved={() => {
+            setEditRestaurant(null)
+            onSaved?.()
           }}
-        >
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--fm-line)',
-              background: page === 0 ? 'transparent' : 'var(--fm-paper)',
-              color: page === 0 ? 'var(--fm-ink-4)' : 'var(--fm-ink)',
-              fontFamily: 'var(--font-geist-sans)',
-              fontSize: 13,
-              cursor: page === 0 ? 'default' : 'pointer',
-            }}
-          >
-            ← 上一页
-          </button>
-          <span
-            style={{
-              fontSize: 13,
-              fontFamily: 'var(--font-geist-mono)',
-              color: 'var(--fm-ink-3)',
-            }}
-          >
-            {page + 1} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page === totalPages - 1}
-            style={{
-              padding: '5px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--fm-line)',
-              background: page === totalPages - 1 ? 'transparent' : 'var(--fm-paper)',
-              color: page === totalPages - 1 ? 'var(--fm-ink-4)' : 'var(--fm-ink)',
-              fontFamily: 'var(--font-geist-sans)',
-              fontSize: 13,
-              cursor: page === totalPages - 1 ? 'default' : 'pointer',
-            }}
-          >
-            下一页 →
-          </button>
-        </div>
+        />
       )}
     </div>
   )
 }
 
-function RestaurantCard({ restaurant: r }: { restaurant: Restaurant }) {
+function RestaurantCard({
+  restaurant: r,
+  isOwner,
+  onClick,
+}: {
+  restaurant: Restaurant
+  isOwner?: boolean
+  onClick?: () => void
+}) {
   const cuisineTags = r.tags.filter((t) => t.type === 'cuisine')
   const otherTags = r.tags.filter((t) => t.type !== 'cuisine')
   const displayTags = [...cuisineTags, ...otherTags].slice(0, 4)
@@ -226,9 +295,10 @@ function RestaurantCard({ restaurant: r }: { restaurant: Restaurant }) {
         padding: '14px 16px',
         display: 'flex',
         gap: 12,
-        cursor: 'default',
+        cursor: isOwner ? 'pointer' : 'default',
         transition: 'box-shadow 0.15s ease',
       }}
+      onClick={onClick}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.10)'
       }}
