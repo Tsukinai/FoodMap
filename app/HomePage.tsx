@@ -29,6 +29,7 @@ const DEFAULT_FILTERS: FilterPayload = {
   min_cost: null,
   area_keyword: null,
   regions: [],
+  status: [],
 }
 
 export default function HomePage() {
@@ -69,6 +70,7 @@ export default function HomePage() {
     if (filters.min_cost) params.set('min_cost', String(filters.min_cost))
     if (filters.area_keyword) params.set('area_keyword', filters.area_keyword)
     if (filters.regions.length > 0) params.set('regions', filters.regions.join(','))
+    if (filters.status?.length === 1) params.set('status', filters.status[0])
 
     try {
       const res = await fetch(`/api/restaurants?${params}`)

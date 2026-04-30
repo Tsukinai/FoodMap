@@ -64,13 +64,25 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
               : 'drop-shadow(0 2px 4px rgba(0,0,0,0.22))',
           }}
         >
-          <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-            <path
-              d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
-              fill={isSelected ? '#1f1c18' : pinColor}
-            />
-            <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
-          </svg>
+          {restaurant.status === 'want' ? (
+            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
+              <path
+                d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
+                fill={isSelected ? '#1f1c18' : 'var(--fm-paper)'}
+                stroke={isSelected ? '#1f1c18' : pinColor}
+                strokeWidth="2"
+              />
+              <circle cx="12" cy="12" r="3.5" fill={isSelected ? 'white' : pinColor} fillOpacity="0.9" />
+            </svg>
+          ) : (
+            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
+              <path
+                d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
+                fill={isSelected ? '#1f1c18' : pinColor}
+              />
+              <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
+            </svg>
+          )}
         </div>
       </Marker>
 
@@ -143,16 +155,32 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
             {/* Card body */}
             <div style={{ padding: '12px 14px 14px' }}>
-              {/* Name */}
-              <div
-                style={{
-                  fontFamily: 'var(--font-instrument-serif)',
-                  fontSize: 21,
-                  lineHeight: 1.15,
-                  marginBottom: 3,
-                }}
-              >
-                {restaurant.name}
+              {/* Name + status badge */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-instrument-serif)',
+                    fontSize: 21,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {restaurant.name}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontWeight: 500,
+                    padding: '2px 7px',
+                    borderRadius: 99,
+                    flexShrink: 0,
+                    background: restaurant.status === 'want' ? '#fdf0e6' : '#eaf4ee',
+                    color: restaurant.status === 'want' ? '#c8883a' : 'var(--fm-green)',
+                    border: restaurant.status === 'want' ? '1px solid #e8c89a' : '1px solid #a8d4b4',
+                  }}
+                >
+                  {restaurant.status === 'want' ? '想吃' : '已吃'}
+                </span>
               </div>
 
               {/* Address */}

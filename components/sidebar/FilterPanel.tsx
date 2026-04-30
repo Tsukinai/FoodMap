@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Tag, FilterPayload } from '@/lib/types'
+import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
 import {
   BROAD_REGIONS,
   CUISINE_COLORS,
@@ -102,6 +102,12 @@ export default function FilterPanel({
     onChange({ ...filters, max_cost: v })
   }
 
+  function toggleStatus(s: RestaurantStatus) {
+    const current = filters.status ?? []
+    const next = current.includes(s) ? current.filter((v) => v !== s) : [...current, s]
+    onChange({ ...filters, status: next })
+  }
+
   function clearAll() {
     onChange({
       cuisine_tags: [],
@@ -112,6 +118,7 @@ export default function FilterPanel({
       min_cost:     null,
       area_keyword: null,
       regions:      [],
+      status:       [],
     })
   }
 
@@ -123,7 +130,8 @@ export default function FilterPanel({
     filters.max_cost !== null ||
     filters.min_cost !== null ||
     filters.area_keyword !== null ||
-    filters.regions.length > 0
+    filters.regions.length > 0 ||
+    (filters.status?.length ?? 0) > 0
 
   // ── Shared input style ───────────────────────────────────────────────────
   const costInputStyle: React.CSSProperties = {
@@ -258,6 +266,43 @@ export default function FilterPanel({
 
       {/* ── Scrollable filter body ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* ── Status ── */}
+        <section>
+          <FilterLabel count={filters.status?.length ?? 0}>状态</FilterLabel>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => {
+              const active = (filters.status ?? []).includes(val)
+              return (
+                <button
+                  key={val}
+                  onClick={() => toggleStatus(val)}
+                  style={{
+                    flex: 1,
+                    padding: '7px 0',
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    border: active
+                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                      : '1.5px solid var(--fm-line-2)',
+                    background: active
+                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                      : 'var(--fm-muted)',
+                    color: active
+                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                      : 'var(--fm-ink-3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </section>
 
         {/* ── Region ── */}
         <section>

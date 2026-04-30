@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Tag, Restaurant } from '@/lib/types'
+import type { Tag, Restaurant, RestaurantStatus } from '@/lib/types'
 import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS, PRESET_CUISINE_TAGS, CHINESE_SUB_CUISINES, PRESET_DISH_TYPE_TAGS } from '@/lib/constants'
 import TagInput from '@/components/tags/TagInput'
 
@@ -37,6 +37,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [sceneTagIds, setSceneTagIds] = useState<string[]>(
     restaurant?.tags.filter((t) => t.type === 'scene').map((t) => t.id) ?? []
   )
+  const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
   const [togglingTag, setTogglingTag] = useState<string | null>(null)
@@ -134,6 +135,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           cost_max: costRange[1] === MAX_COST ? null : costRange[1],
           notes: notes || null,
           signature_dishes: signatureDishes,
+          status,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
           taste_tag_ids: tasteTagIds,
@@ -353,6 +355,39 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                   </button>
                 )
               })}
+            </div>
+          </FormSection>
+
+          {/* Status */}
+          <FormSection label="状态">
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setStatus(val)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 0',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    border: status === val
+                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                      : '1px solid var(--fm-line-2)',
+                    background: status === val
+                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                      : 'var(--fm-paper)',
+                    color: status === val
+                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                      : 'var(--fm-ink-3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </FormSection>
 
