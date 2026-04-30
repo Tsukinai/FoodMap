@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
-import { REGION_BOUNDS } from '@/lib/constants'
 
 function parseEWKBPoint(hex: string): [number, number] | null {
   try {
@@ -25,8 +24,7 @@ export async function GET(request: NextRequest) {
   const sceneTags = searchParams.get('scene_tags')?.split(',').filter(Boolean) ?? []
   const maxCost = searchParams.get('max_cost') ? Number(searchParams.get('max_cost')) : null
   const minCost = searchParams.get('min_cost') ? Number(searchParams.get('min_cost')) : null
-  const regions = searchParams.get('regions')?.split(',').filter(Boolean) ?? []
-  const areaKeyword = searchParams.get('area_keyword') ?? null
+  const statusFilter = searchParams.get('status')?.split(',').filter(Boolean) ?? []
 
   const supabase = await createClient()
 
@@ -35,7 +33,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, name, address, postal_code,
       location,
-      cost_min, cost_max, notes, signature_dishes, created_at, updated_at,
+      cost_min, cost_max, notes, signature_dishes, status, created_at, updated_at,
       restaurant_tags (
         tags ( id, name, type )
       )
@@ -43,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   if (maxCost !== null) query = query.lte('cost_max', maxCost)
   if (minCost !== null) query = query.gte('cost_min', minCost)
-  if (areaKeyword) query = query.ilike('address', `%${areaKeyword}%`)
+  if (statusFilter.length === 1) query = query.eq('status', statusFilter[0])
 
   const { data, error } = await query.order('created_at', { ascending: false })
 
@@ -59,6 +57,7 @@ export async function GET(request: NextRequest) {
       location_lat: coords?.[1] ?? null,
       location: undefined,
       signature_dishes: r.signature_dishes ?? [],
+      status: r.status ?? 'visited',
       tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
       restaurant_tags: undefined,
     }
@@ -96,19 +95,6 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (regions.length > 0) {
-    results = results.filter((r: any) => {
-      const lng = r.location_lng
-      const lat = r.location_lat
-      return regions.some((region) => {
-        const bounds = REGION_BOUNDS[region]
-        if (!bounds) return false
-        const [west, south, east, north] = bounds
-        return lng >= west && lng <= east && lat >= south && lat <= north
-      })
-    })
-  }
-
   return NextResponse.json(results)
 }
 
@@ -117,7 +103,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
+  const { name, address, postal_code, lng, lat, cost_min, cost_max, notes, signature_dishes, status, cuisine_tag_ids, dish_tag_ids, taste_tag_ids, scene_tag_ids } = body
 
   if (!name || typeof lng !== 'number' || typeof lat !== 'number') {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -136,6 +122,7 @@ export async function POST(request: NextRequest) {
       cost_max: cost_max || null,
       notes: notes || null,
       signature_dishes: signature_dishes ?? [],
+      status: status ?? 'visited',
     })
     .select('id')
     .single()

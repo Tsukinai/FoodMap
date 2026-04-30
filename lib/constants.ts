@@ -5,17 +5,6 @@ export const SINGAPORE_BOUNDS: [[number, number], [number, number]] = [
   [104.05, 1.49],
 ]
 
-// Approximate bounding boxes per region [west, south, east, north]
-export const REGION_BOUNDS: Record<string, [number, number, number, number]> = {
-  '中部':   [103.780, 1.250, 103.900, 1.390],
-  '东部':   [103.880, 1.290, 104.050, 1.420],
-  '西部':   [103.620, 1.270, 103.800, 1.410],
-  '北部':   [103.750, 1.390, 103.900, 1.490],
-  '东北部': [103.840, 1.340, 103.970, 1.440],
-}
-
-export const REGIONS = Object.keys(REGION_BOUNDS)
-export const BROAD_REGIONS = REGIONS
 
 export const CUISINE_COLORS: Record<string, string> = {
   // Singapore-specific cuisines
@@ -95,9 +84,3 @@ export const CUISINE_BG: Record<string, string> = {
   '本地菜': '#fff8f0',
 }
 
-export const PRESET_TASTE_TAGS = ['不辣', '微辣', '特辣']
-export const PRESET_SCENE_TAGS = ['早餐', 'brunch', '正餐', '夜宵', '下午茶/甜点']
-
-export const PRESET_CUISINE_TAGS = ['中餐', '东南亚菜', '韩餐', '日料', '泰餐', '西餐', '甜品']
-export const CHINESE_SUB_CUISINES = ['粤菜', '川菜', '云南菜', '湘菜', '新疆菜']
-export const PRESET_DISH_TYPE_TAGS = ['炸鸡汉堡', '烧烤', '烤肉', '披萨', '炒菜', '漂亮饭']

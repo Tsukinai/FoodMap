@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Tag, Restaurant } from '@/lib/types'
-import { PRESET_TASTE_TAGS, PRESET_SCENE_TAGS, PRESET_CUISINE_TAGS, CHINESE_SUB_CUISINES, PRESET_DISH_TYPE_TAGS } from '@/lib/constants'
+import type { Tag, Restaurant, RestaurantStatus } from '@/lib/types'
 import TagInput from '@/components/tags/TagInput'
 
 interface Props {
@@ -37,9 +36,9 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [sceneTagIds, setSceneTagIds] = useState<string[]>(
     restaurant?.tags.filter((t) => t.type === 'scene').map((t) => t.id) ?? []
   )
+  const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
   const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
   const [saving, setSaving] = useState(false)
-  const [togglingTag, setTogglingTag] = useState<string | null>(null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [geoResults, setGeoResults] = useState<{ address: string; postal_code: string; lng: number; lat: number }[]>([])
@@ -49,56 +48,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   useEffect(() => {
     fetch('/api/tags').then((r) => r.json()).then(setAllTags)
   }, [])
-
-  async function ensureTagInModal(name: string, type: Tag['type']): Promise<Tag> {
-    const existing = allTags.find((t) => t.type === type && t.name === name)
-    if (existing) return existing
-    const res = await fetch('/api/tags', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, type }),
-    })
-    const tag: Tag = await res.json()
-    setAllTags((prev) => (prev.some((t) => t.id === tag.id) ? prev : [...prev, tag]))
-    return tag
-  }
-
-  function isTagNameSelected(name: string, type: 'taste' | 'scene'): boolean {
-    const tag = allTags.find((t) => t.type === type && t.name === name)
-    return tag ? (type === 'taste' ? tasteTagIds : sceneTagIds).includes(tag.id) : false
-  }
-
-  async function toggleTasteByName(name: string) {
-    if (togglingTag) return
-    const existing = allTags.find((t) => t.type === 'taste' && t.name === name)
-    if (existing && tasteTagIds.includes(existing.id)) {
-      setTasteTagIds((prev) => prev.filter((id) => id !== existing.id))
-      return
-    }
-    setTogglingTag(name)
-    try {
-      const realTag = await ensureTagInModal(name, 'taste')
-      setTasteTagIds((prev) => (prev.includes(realTag.id) ? prev : [...prev, realTag.id]))
-    } finally {
-      setTogglingTag(null)
-    }
-  }
-
-  async function toggleSceneByName(name: string) {
-    if (togglingTag) return
-    const existing = allTags.find((t) => t.type === 'scene' && t.name === name)
-    if (existing && sceneTagIds.includes(existing.id)) {
-      setSceneTagIds((prev) => prev.filter((id) => id !== existing.id))
-      return
-    }
-    setTogglingTag(name)
-    try {
-      const realTag = await ensureTagInModal(name, 'scene')
-      setSceneTagIds((prev) => (prev.includes(realTag.id) ? prev : [...prev, realTag.id]))
-    } finally {
-      setTogglingTag(null)
-    }
-  }
 
   async function handleGeoSearch() {
     if (!searchQuery.trim()) return
@@ -134,6 +83,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           cost_max: costRange[1] === MAX_COST ? null : costRange[1],
           notes: notes || null,
           signature_dishes: signatureDishes,
+          status,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
           taste_tag_ids: tasteTagIds,
@@ -165,7 +115,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         }}
       >
         {/* Header */}
-        <div style={{ padding: '28px 36px 0' }}>
+        <div className="fm-modal-header" style={{ padding: '28px 36px 0' }}>
           <div
             style={{
               fontFamily: 'var(--font-geist-mono)',
@@ -192,9 +142,9 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
+        <div className="fm-modal-body flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
           {/* Name + Address row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
             <FmInput
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -205,7 +155,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleGeoSearch()}
-                placeholder="邮编 / 地址搜索"
+                placeholder="邮编 / 地址搜索 *"
               />
               {geoResults.length > 0 && (
                 <div
@@ -236,9 +186,13 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </div>
           </div>
 
-          {address && (
+          {address ? (
             <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
               {address}{postalCode ? ` · ${postalCode}` : ''}
+            </p>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
+              请搜索并从下拉列表中选择地址
             </p>
           )}
 
@@ -252,9 +206,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
               onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
               canManage
-              presets={PRESET_CUISINE_TAGS}
-              subPresets={CHINESE_SUB_CUISINES}
-              subPresetsParent="中餐"
             />
           </FormSection>
 
@@ -273,12 +224,11 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
               onTagCreated={(tag) => setAllTags((prev) => [...prev, tag])}
               onTagDeleted={(id) => setAllTags((prev) => prev.filter((t) => t.id !== id))}
               canManage
-              presets={PRESET_DISH_TYPE_TAGS}
             />
           </FormSection>
 
           {/* Cost + Taste row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
+          <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 14 }}>
             <FormSection label="人均消费 (S$)" noMargin>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>
@@ -302,8 +252,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                   value={costRange[1] === MAX_COST ? '' : costRange[1]}
                   onChange={(e) => {
                     const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
-                    const v = Math.max(costRange[0], Math.min(raw, MAX_COST))
-                    setCostRange([costRange[0], v])
+                    setCostRange([costRange[0], raw])
                   }}
                   placeholder="不限"
                   min={0}
@@ -316,18 +265,16 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
 
             <FormSection label="口味" noMargin>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {PRESET_TASTE_TAGS.map((name) => {
-                  const active = isTagNameSelected(name, 'taste')
-                  const loading = togglingTag === name
+                {allTags.filter((t) => t.type === 'taste').map((tag) => {
+                  const active = tasteTagIds.includes(tag.id)
                   return (
                     <button
-                      key={name}
-                      onClick={() => toggleTasteByName(name)}
-                      disabled={loading}
+                      key={tag.id}
+                      onClick={() => setTasteTagIds((prev) => active ? prev.filter((i) => i !== tag.id) : [...prev, tag.id])}
                       className="fm-tag fm-tag-taste"
-                      style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}
+                      style={{ outline: active ? '1.5px solid var(--fm-orange-dark)' : 'none', cursor: 'pointer' }}
                     >
-                      {name}
+                      {tag.name}
                     </button>
                   )
                 })}
@@ -338,21 +285,52 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           {/* Scene tags */}
           <FormSection label="场合">
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              {PRESET_SCENE_TAGS.map((name) => {
-                const active = isTagNameSelected(name, 'scene')
-                const loading = togglingTag === name
+              {allTags.filter((t) => t.type === 'scene').map((tag) => {
+                const active = sceneTagIds.includes(tag.id)
                 return (
                   <button
-                    key={name}
-                    onClick={() => toggleSceneByName(name)}
-                    disabled={loading}
+                    key={tag.id}
+                    onClick={() => setSceneTagIds((prev) => active ? prev.filter((i) => i !== tag.id) : [...prev, tag.id])}
                     className="fm-tag fm-tag-scene"
-                    style={{ outline: active ? '1.5px solid #4a3d6b' : 'none', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}
+                    style={{ outline: active ? '1.5px solid #4a3d6b' : 'none', cursor: 'pointer' }}
                   >
-                    {name}
+                    {tag.name}
                   </button>
                 )
               })}
+            </div>
+          </FormSection>
+
+          {/* Status */}
+          <FormSection label="状态">
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setStatus(val)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 0',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    border: status === val
+                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                      : '1px solid var(--fm-line-2)',
+                    background: status === val
+                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                      : 'var(--fm-paper)',
+                    color: status === val
+                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                      : 'var(--fm-ink-3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </FormSection>
 
@@ -401,17 +379,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !name.trim()}
+              disabled={saving || !name.trim() || !address.trim()}
               style={{
                 padding: '10px 18px',
                 borderRadius: 8,
                 fontSize: 13.5,
                 fontWeight: 500,
                 border: '1px solid var(--fm-orange)',
-                background: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
-                borderColor: saving || !name.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                background: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                borderColor: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
                 color: '#fff',
-                cursor: saving || !name.trim() ? 'default' : 'pointer',
+                cursor: saving || !name.trim() || !address.trim() ? 'default' : 'pointer',
                 fontFamily: 'var(--font-geist-sans)',
                 boxShadow: '0 4px 10px rgba(217,107,44,0.25)',
               }}

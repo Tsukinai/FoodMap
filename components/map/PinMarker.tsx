@@ -13,9 +13,11 @@ interface Props {
   onClick: () => void
   onRefresh: () => void
   onEdit: () => void
+  pixelOffset?: [number, number]
+  stackCount?: number
 }
 
-export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit }: Props) {
+export default function PinMarker({ restaurant, isOwner, editMode, isSelected, onClick, onRefresh, onEdit, pixelOffset, stackCount }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -43,20 +45,47 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
     onRefresh()
   }
 
+  const [offsetX, offsetY] = pixelOffset ?? [0, 0]
+
   return (
     <>
       <Marker
         longitude={restaurant.location_lng}
         latitude={restaurant.location_lat}
         anchor="bottom"
+        offset={[offsetX, offsetY]}
         onClick={(e) => {
           e.originalEvent.stopPropagation()
           onClick()
         }}
       >
-        {/* Pin SVG — 24×32, colour-coded by cuisine */}
+        <div className="relative cursor-pointer">
+        {stackCount && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -5,
+              right: -7,
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: 'var(--fm-ink)',
+              color: 'var(--fm-paper)',
+              fontSize: 9,
+              fontFamily: 'var(--font-geist-mono)',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1,
+              pointerEvents: 'none',
+            }}
+          >
+            {stackCount}
+          </div>
+        )}
         <div
-          className="cursor-pointer transition-transform"
+          className="transition-transform"
           style={{
             transform: isSelected ? 'scale(1.25) translateY(-2px)' : 'scale(1)',
             filter: isSelected
@@ -64,13 +93,26 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
               : 'drop-shadow(0 2px 4px rgba(0,0,0,0.22))',
           }}
         >
-          <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-            <path
-              d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
-              fill={isSelected ? '#1f1c18' : pinColor}
-            />
-            <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
-          </svg>
+          {restaurant.status === 'want' ? (
+            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
+              <path
+                d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
+                fill={isSelected ? '#1f1c18' : 'var(--fm-paper)'}
+                stroke={isSelected ? '#1f1c18' : pinColor}
+                strokeWidth="2"
+              />
+              <circle cx="12" cy="12" r="3.5" fill={isSelected ? 'white' : pinColor} fillOpacity="0.9" />
+            </svg>
+          ) : (
+            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
+              <path
+                d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20S24 21 24 12C24 5.373 18.627 0 12 0z"
+                fill={isSelected ? '#1f1c18' : pinColor}
+              />
+              <circle cx="12" cy="12" r="5" fill="white" fillOpacity="0.92" />
+            </svg>
+          )}
+        </div>
         </div>
       </Marker>
 
@@ -79,7 +121,7 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
           longitude={restaurant.location_lng}
           latitude={restaurant.location_lat}
           anchor="bottom"
-          offset={36}
+          offset={[offsetX, offsetY - 36]}
           closeButton={false}
           onClose={onClick}
           maxWidth="360px"
@@ -143,16 +185,32 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
             {/* Card body */}
             <div style={{ padding: '12px 14px 14px' }}>
-              {/* Name */}
-              <div
-                style={{
-                  fontFamily: 'var(--font-instrument-serif)',
-                  fontSize: 21,
-                  lineHeight: 1.15,
-                  marginBottom: 3,
-                }}
-              >
-                {restaurant.name}
+              {/* Name + status badge */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-instrument-serif)',
+                    fontSize: 21,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {restaurant.name}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontFamily: 'var(--font-geist-mono)',
+                    fontWeight: 500,
+                    padding: '2px 7px',
+                    borderRadius: 99,
+                    flexShrink: 0,
+                    background: restaurant.status === 'want' ? '#fdf0e6' : '#eaf4ee',
+                    color: restaurant.status === 'want' ? '#c8883a' : 'var(--fm-green)',
+                    border: restaurant.status === 'want' ? '1px solid #e8c89a' : '1px solid #a8d4b4',
+                  }}
+                >
+                  {restaurant.status === 'want' ? '想吃' : '已吃'}
+                </span>
               </div>
 
               {/* Address */}

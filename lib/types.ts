@@ -4,8 +4,12 @@ export interface Tag {
   id: string
   name: string
   type: TagType
+  parent_id: string | null
+  sort_order: number
   created_at: string
 }
+
+export type RestaurantStatus = 'want' | 'visited'
 
 export interface Restaurant {
   id: string
@@ -18,6 +22,7 @@ export interface Restaurant {
   cost_max: number | null
   notes: string | null
   signature_dishes: string[]
+  status: RestaurantStatus
   created_at: string
   updated_at: string
   tags: Tag[]
@@ -33,6 +38,7 @@ export interface RestaurantFormData {
   cost_max: number | null
   notes: string
   signature_dishes: string[]
+  status: RestaurantStatus
   cuisine_tag_ids: string[]
   dish_tag_ids: string[]
   taste_tag_ids: string[]
@@ -46,8 +52,7 @@ export interface FilterPayload {
   scene_tags: string[]
   max_cost: number | null
   min_cost: number | null
-  area_keyword: string | null
-  regions: string[]
+  status: RestaurantStatus[]
 }
 
 export interface OneMapResult {

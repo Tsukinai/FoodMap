@@ -27,8 +27,7 @@ const DEFAULT_FILTERS: FilterPayload = {
   scene_tags: [],
   max_cost: null,
   min_cost: null,
-  area_keyword: null,
-  regions: [],
+  status: [],
 }
 
 export default function HomePage() {
@@ -39,7 +38,8 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(true)
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
 
   const supabase = createClient()
@@ -59,6 +59,17 @@ export default function HomePage() {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    const update = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (!mobile) setSidebarOpen(true)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   const fetchRestaurants = useCallback(async () => {
     const params = new URLSearchParams()
     if (filters.cuisine_tags.length > 0) params.set('cuisine_tags', filters.cuisine_tags.join(','))
@@ -67,8 +78,7 @@ export default function HomePage() {
     if (filters.scene_tags?.length > 0) params.set('scene_tags', filters.scene_tags.join(','))
     if (filters.max_cost) params.set('max_cost', String(filters.max_cost))
     if (filters.min_cost) params.set('min_cost', String(filters.min_cost))
-    if (filters.area_keyword) params.set('area_keyword', filters.area_keyword)
-    if (filters.regions.length > 0) params.set('regions', filters.regions.join(','))
+    if (filters.status?.length === 1) params.set('status', filters.status[0])
 
     try {
       const res = await fetch(`/api/restaurants?${params}`)
@@ -96,9 +106,27 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0"
+          style={{ background: 'rgba(31,28,24,0.4)', zIndex: 40 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar — collapsible wrapper */}
       <div
-        style={{
+        style={isMobile ? {
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100%',
+          width: sidebarOpen ? 292 : 0,
+          zIndex: 50,
+          overflow: 'hidden',
+          transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+        } : {
           width: sidebarOpen ? 292 : 0,
           flexShrink: 0,
           overflow: 'hidden',
@@ -151,7 +179,12 @@ export default function HomePage() {
         {/* Main content: map or list */}
         <div className="flex-1 relative">
           {viewMode === 'list' ? (
-            <RestaurantList restaurants={allRestaurants} loading={loading} />
+            <RestaurantList
+              restaurants={allRestaurants}
+              loading={loading}
+              isOwner={isOwner}
+              onSaved={() => { fetchRestaurants(); fetchTags() }}
+            />
           ) : loading ? (
             <div
               className="flex items-center justify-center h-full text-sm"

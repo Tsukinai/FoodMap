@@ -1,19 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Tag, FilterPayload } from '@/lib/types'
-import {
-  BROAD_REGIONS,
-  CUISINE_COLORS,
-  CUISINE_BG,
-  PRESET_TASTE_TAGS,
-  PRESET_SCENE_TAGS,
-  PRESET_CUISINE_TAGS,
-  CHINESE_SUB_CUISINES,
-  PRESET_DISH_TYPE_TAGS,
-} from '@/lib/constants'
+import Link from 'next/link'
+import type { Tag, FilterPayload, RestaurantStatus } from '@/lib/types'
+import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
-import SmartSearchBar from './SmartSearchBar'
 import { createClient } from '@/lib/supabase/client'
 
 interface Props {
@@ -42,6 +33,15 @@ export default function FilterPanel({
   onViewModeChange,
 }: Props) {
   const supabase = createClient()
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
+
+  function toggleExpand(id: string) {
+    setExpandedParents(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   async function signIn() {
     await supabase.auth.signInWithOAuth({
@@ -56,40 +56,23 @@ export default function FilterPanel({
   }
 
   // ── Tag helpers ──────────────────────────────────────────────────────────
-  const tasteTags     = allTags.filter((t) => t.type === 'taste')
-  const sceneTags     = allTags.filter((t) => t.type === 'scene')
-
-  // Cuisine: always show preset top-level + sub-cuisines; append any extra DB tags
-  const dbCuisineNames = allTags.filter((t) => t.type === 'cuisine').map((t) => t.name)
-  const extraCuisineNames = dbCuisineNames.filter(
-    (n) => !PRESET_CUISINE_TAGS.includes(n) && !CHINESE_SUB_CUISINES.includes(n)
-  )
-  const displayCuisineNames = [...PRESET_CUISINE_TAGS, ...extraCuisineNames]
-
-  // Dish type (种类): always show presets; append any extra DB dish tags
-  const dbDishNames = allTags.filter((t) => t.type === 'dish').map((t) => t.name)
-  const extraDishNames = dbDishNames.filter((n) => !PRESET_DISH_TYPE_TAGS.includes(n))
-  const displayDishTypeNames = [...PRESET_DISH_TYPE_TAGS, ...extraDishNames]
-
-  const displayTasteTags = tasteTags.length > 0
-    ? tasteTags
-    : PRESET_TASTE_TAGS.map((name, i) => ({ id: `pt-${i}`, name, type: 'taste' as const, created_at: '' }))
-
-  const displaySceneTags = sceneTags.length > 0
-    ? sceneTags
-    : PRESET_SCENE_TAGS.map((name, i) => ({ id: `ps-${i}`, name, type: 'scene' as const, created_at: '' }))
+  const cuisineTopLevel = allTags.filter((t) => t.type === 'cuisine' && !t.parent_id)
+  const cuisineSub      = allTags.filter((t) => t.type === 'cuisine' && !!t.parent_id)
+  const childrenByParent = new Map<string, Tag[]>()
+  cuisineSub.forEach(tag => {
+    if (!tag.parent_id) return
+    const list = childrenByParent.get(tag.parent_id) ?? []
+    list.push(tag)
+    childrenByParent.set(tag.parent_id, list)
+  })
+  const dishTags        = allTags.filter((t) => t.type === 'dish')
+  const tasteTags       = allTags.filter((t) => t.type === 'taste')
+  const sceneTags       = allTags.filter((t) => t.type === 'scene')
 
   // ── Toggle helpers ───────────────────────────────────────────────────────
   function toggleArr(key: keyof FilterPayload, name: string) {
     const arr = (filters[key] as string[]) ?? []
     onChange({ ...filters, [key]: arr.includes(name) ? arr.filter((n) => n !== name) : [...arr, name] })
-  }
-
-  function toggleRegion(region: string) {
-    const next = filters.regions.includes(region)
-      ? filters.regions.filter((r) => r !== region)
-      : [...filters.regions, region]
-    onChange({ ...filters, regions: next })
   }
 
   function handleCostMin(e: React.ChangeEvent<HTMLInputElement>) {
@@ -102,6 +85,12 @@ export default function FilterPanel({
     onChange({ ...filters, max_cost: v })
   }
 
+  function toggleStatus(s: RestaurantStatus) {
+    const current = filters.status ?? []
+    const next = current.includes(s) ? current.filter((v) => v !== s) : [...current, s]
+    onChange({ ...filters, status: next })
+  }
+
   function clearAll() {
     onChange({
       cuisine_tags: [],
@@ -110,8 +99,7 @@ export default function FilterPanel({
       scene_tags:   [],
       max_cost:     null,
       min_cost:     null,
-      area_keyword: null,
-      regions:      [],
+      status:       [],
     })
   }
 
@@ -122,8 +110,7 @@ export default function FilterPanel({
     (filters.scene_tags?.length ?? 0) > 0 ||
     filters.max_cost !== null ||
     filters.min_cost !== null ||
-    filters.area_keyword !== null ||
-    filters.regions.length > 0
+    (filters.status?.length ?? 0) > 0
 
   // ── Shared input style ───────────────────────────────────────────────────
   const costInputStyle: React.CSSProperties = {
@@ -193,12 +180,6 @@ export default function FilterPanel({
           </div>
         </div>
 
-        {/* Smart search */}
-        <SmartSearchBar
-          allTags={allTags}
-          onFilter={(payload) => onChange({ ...filters, ...payload })}
-        />
-
         {/* View mode toggle */}
         {onViewModeChange && (
           <div
@@ -259,81 +240,148 @@ export default function FilterPanel({
       {/* ── Scrollable filter body ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* ── Region ── */}
+        {/* ── Status ── */}
         <section>
-          <FilterLabel count={filters.regions.length}>区域</FilterLabel>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
-            {BROAD_REGIONS.map((r) => (
-              <button
-                key={r}
-                className={`fm-chip${filters.regions.includes(r) ? ' active' : ''}`}
-                style={{ fontSize: 12, padding: '6px 4px' }}
-                onClick={() => toggleRegion(r)}
-              >
-                {r}
-              </button>
-            ))}
+          <FilterLabel count={filters.status?.length ?? 0}>状态</FilterLabel>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => {
+              const active = (filters.status ?? []).includes(val)
+              return (
+                <button
+                  key={val}
+                  onClick={() => toggleStatus(val)}
+                  style={{
+                    flex: 1,
+                    padding: '7px 0',
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-geist-sans)',
+                    border: active
+                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                      : '1.5px solid var(--fm-line-2)',
+                    background: active
+                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                      : 'var(--fm-muted)',
+                    color: active
+                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                      : 'var(--fm-ink-3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </section>
 
         {/* ── Cuisine ── */}
         <section>
           <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayCuisineNames.map((name) => {
-              const active = filters.cuisine_tags.includes(name)
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
-              return (
-                <button
-                  key={name}
-                  onClick={() => toggleArr('cuisine_tags', name)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {name}
-                </button>
-              )
-            })}
-          </div>
-          {/* Chinese sub-cuisines */}
-          <div style={{ marginTop: 6, paddingLeft: 2, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {CHINESE_SUB_CUISINES.map((name) => {
-              const active = filters.cuisine_tags.includes(name)
-              const fg = CUISINE_COLORS[name] ?? 'var(--fm-ink-2)'
-              const bg = CUISINE_BG[name]     ?? 'var(--fm-muted)'
-              return (
-                <button
-                  key={name}
-                  onClick={() => toggleArr('cuisine_tags', name)}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: 6,
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? fg : bg,
-                    color: active ? '#fff' : fg,
-                    border: `1.5px solid ${active ? fg : 'transparent'}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {name}
-                </button>
-              )
-            })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {cuisineTopLevel.map((tag) => {
+                const children = childrenByParent.get(tag.id) ?? []
+                const isExpanded = expandedParents.has(tag.id)
+                const active = filters.cuisine_tags.includes(tag.name)
+                const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
+                const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
+                return (
+                  <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <button
+                      onClick={() => toggleArr('cuisine_tags', tag.name)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-geist-sans)',
+                        background: active ? fg : bg,
+                        color: active ? '#fff' : fg,
+                        border: `1.5px solid ${active ? fg : 'transparent'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                    {children.length > 0 && (
+                      <button
+                        onClick={() => toggleExpand(tag.id)}
+                        title={isExpanded ? '收起' : '展开'}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 6,
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          color: 'var(--fm-ink-4)',
+                          fontSize: 9,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: 0,
+                          transition: 'transform 0.15s',
+                          transform: isExpanded ? 'rotate(90deg)' : 'none',
+                          flexShrink: 0,
+                        }}
+                      >
+                        ▸
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Expanded sub-cuisine panels */}
+            {cuisineTopLevel
+              .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
+              .map(parent => {
+                const parentFg = CUISINE_COLORS[parent.name] ?? 'var(--fm-ink-2)'
+                return (
+                  <div
+                    key={parent.id}
+                    style={{
+                      paddingLeft: 8,
+                      borderLeft: `2px solid ${parentFg}`,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 4,
+                    }}
+                  >
+                    {childrenByParent.get(parent.id)!.map(child => {
+                      const childActive = filters.cuisine_tags.includes(child.name)
+                      const childFg = CUISINE_COLORS[child.name] ?? parentFg
+                      const childBg = CUISINE_BG[child.name] ?? 'var(--fm-muted)'
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => toggleArr('cuisine_tags', child.name)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 500,
+                            fontFamily: 'var(--font-geist-sans)',
+                            background: childActive ? childFg : childBg,
+                            color: childActive ? '#fff' : childFg,
+                            border: `1.5px solid ${childActive ? childFg : 'transparent'}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.12s',
+                          }}
+                        >
+                          {child.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })
+            }
           </div>
         </section>
 
@@ -341,16 +389,16 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.dish_tags.length}>种类</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayDishTypeNames.map((name) => {
-              const active = filters.dish_tags.includes(name)
+            {dishTags.map((tag) => {
+              const active = filters.dish_tags.includes(tag.name)
               return (
                 <button
-                  key={name}
-                  onClick={() => toggleArr('dish_tags', name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('dish_tags', tag.name)}
                   className={`fm-chip${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -394,16 +442,16 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displayTasteTags.map((t) => {
-              const active = (filters.taste_tags ?? []).includes(t.name)
+            {tasteTags.map((tag) => {
+              const active = (filters.taste_tags ?? []).includes(tag.name)
               return (
                 <button
-                  key={t.id}
-                  onClick={() => toggleArr('taste_tags', t.name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('taste_tags', tag.name)}
                   className={`fm-chip fm-chip-taste${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {t.name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -414,16 +462,16 @@ export default function FilterPanel({
         <section>
           <FilterLabel count={filters.scene_tags?.length ?? 0}>场合</FilterLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {displaySceneTags.map((t) => {
-              const active = (filters.scene_tags ?? []).includes(t.name)
+            {sceneTags.map((tag) => {
+              const active = (filters.scene_tags ?? []).includes(tag.name)
               return (
                 <button
-                  key={t.id}
-                  onClick={() => toggleArr('scene_tags', t.name)}
+                  key={tag.id}
+                  onClick={() => toggleArr('scene_tags', tag.name)}
                   className={`fm-chip fm-chip-scene${active ? ' active' : ''}`}
                   style={{ fontSize: 12 }}
                 >
-                  {t.name}
+                  {tag.name}
                 </button>
               )
             })}
@@ -443,14 +491,24 @@ export default function FilterPanel({
             {restaurantCount} 个餐厅
             {hasFilters && <span style={{ color: 'var(--fm-orange)', marginLeft: 4 }}>（已筛选）</span>}
           </span>
-          {hasFilters && (
-            <button
-              onClick={clearAll}
-              style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer', fontSize: 11.5 }}
-            >
-              重置
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {isOwner && (
+              <Link
+                href="/tags"
+                style={{ fontSize: 11.5, color: 'var(--fm-ink-4)', textDecoration: 'none' }}
+              >
+                管理标签
+              </Link>
+            )}
+            {hasFilters && (
+              <button
+                onClick={clearAll}
+                style={{ color: 'var(--fm-orange-dark)', cursor: 'pointer', fontSize: 11.5 }}
+              >
+                重置
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Auth */}
@@ -476,14 +534,14 @@ export default function FilterPanel({
                   fontWeight: 600,
                 }}
               >
-                {user.email?.slice(0, 2).toUpperCase()}
+                {(user.user_metadata?.full_name ?? user.email ?? '').slice(0, 2).toUpperCase()}
               </div>
             )}
             <span
               className="flex-1 truncate"
               style={{ fontSize: 11.5, color: 'var(--fm-ink-3)' }}
             >
-              {user.email}
+              {user.user_metadata?.full_name ?? user.email}
             </span>
             <button
               onClick={signOut}
