@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js'
 import FilterPanel from '@/components/sidebar/FilterPanel'
 import RestaurantList from '@/components/RestaurantList'
 import GuestbookPanel from '@/components/guestbook/GuestbookPanel'
+import DisclaimerModal from '@/components/DisclaimerModal'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -107,6 +108,7 @@ export default function HomePage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
+      <DisclaimerModal />
       {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div
