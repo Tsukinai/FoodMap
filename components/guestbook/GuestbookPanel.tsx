@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from '@/lib/auth'
 import type { User } from '@supabase/supabase-js'
 
 interface Message {
@@ -34,8 +34,6 @@ export default function GuestbookPanel({ user, isOwner }: Props) {
   const [replyText, setReplyText] = useState('')
   const [replySubmitting, setReplySubmitting] = useState(false)
 
-  const supabase = createClient()
-
   const fetchMessages = useCallback(async () => {
     const res = await fetch('/api/messages')
     const data = await res.json()
@@ -44,13 +42,6 @@ export default function GuestbookPanel({ user, isOwner }: Props) {
   }, [])
 
   useEffect(() => { fetchMessages() }, [fetchMessages])
-
-  async function signIn() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
-    })
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -42,21 +42,26 @@ function getGroupKey(t: Tag) {
 
 function computeIsDirty(current: Tag[], saved: Tag[]): boolean {
   if (current.some(t => t.id.startsWith('tmp-'))) return true
-  if (saved.some(st => !current.find(t => t.id === st.id))) return true
-  if (current.some(t => !t.id.startsWith('tmp-') && !saved.find(s => s.id === t.id))) return true
-
+  if (current.length !== saved.length) return true
+  const savedMap = new Map(saved.map(t => [t.id, t]))
+  if (current.some(t => { const s = savedMap.get(t.id); return !s || s.name !== t.name })) return true
+  // Check order within each group
+  const byGroup = new Map<string, { curr: string[]; saved: string[] }>()
   for (const t of current) {
-    const s = saved.find(s => s.id === t.id)
-    if (s && s.name !== t.name) return true
+    const key = getGroupKey(t)
+    const entry = byGroup.get(key) ?? { curr: [], saved: [] }
+    entry.curr.push(t.id)
+    byGroup.set(key, entry)
   }
-
-  const allKeys = new Set([...current, ...saved].map(getGroupKey))
-  for (const key of allKeys) {
-    const currIds = current.filter(t => getGroupKey(t) === key).map(t => t.id)
-    const savedIds = saved.filter(t => getGroupKey(t) === key).map(t => t.id)
-    if (currIds.join(',') !== savedIds.join(',')) return true
+  for (const t of saved) {
+    const key = getGroupKey(t)
+    const entry = byGroup.get(key) ?? { curr: [], saved: [] }
+    entry.saved.push(t.id)
+    byGroup.set(key, entry)
   }
-
+  for (const { curr, saved: sav } of byGroup.values()) {
+    if (curr.join(',') !== sav.join(',')) return true
+  }
   return false
 }
 

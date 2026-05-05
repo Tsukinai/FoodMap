@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Marker, Popup } from 'react-map-gl/maplibre'
 import type { Restaurant } from '@/lib/types'
-import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { CUISINE_STYLES } from '@/lib/constants'
 import { getRatingStyle } from '@/components/map/AddPinModal'
 
 interface Props {
@@ -22,15 +22,14 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const cuisineTags = restaurant.tags.filter((t) => t.type === 'cuisine')
-  const dishTags    = restaurant.tags.filter((t) => t.type === 'dish')
-  const tasteTags   = restaurant.tags.filter((t) => t.type === 'taste')
-  const sceneTags   = restaurant.tags.filter((t) => t.type === 'scene')
+  const cuisineTags = useMemo(() => restaurant.tags.filter((t) => t.type === 'cuisine'), [restaurant.tags])
+  const dishTags    = useMemo(() => restaurant.tags.filter((t) => t.type === 'dish'),    [restaurant.tags])
+  const tasteTags   = useMemo(() => restaurant.tags.filter((t) => t.type === 'taste'),   [restaurant.tags])
+  const sceneTags   = useMemo(() => restaurant.tags.filter((t) => t.type === 'scene'),   [restaurant.tags])
 
   // Pick colour from first cuisine tag, fall back to orange
   const primaryCuisine = cuisineTags[0]?.name
-  const pinColor  = CUISINE_COLORS[primaryCuisine ?? ''] ?? 'var(--fm-orange)'
-  const pinBg     = CUISINE_BG[primaryCuisine ?? '']    ?? '#fdf0e6'
+  const { color: pinColor, bg: pinBg } = CUISINE_STYLES[primaryCuisine ?? ''] ?? { color: 'var(--fm-orange)', bg: '#fdf0e6' }
 
   const cost = restaurant.cost_min && restaurant.cost_max
     ? `S$ ${restaurant.cost_min}–${restaurant.cost_max}`

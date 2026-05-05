@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import Map, { NavigationControl, type MapRef } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/constants'
@@ -43,7 +43,6 @@ function computeGroupInfo(
   return result
 }
 import AddPinModal from './AddPinModal'
-import EditPinModal from './EditPinModal'
 
 // CartoDB Voyager — warm, clean, free, no API key needed
 const MAP_STYLE = {
@@ -96,7 +95,7 @@ export default function MapContainer({
     }
   }, [addingPin, onAddingPinChange])
 
-  const groupInfo = computeGroupInfo(restaurants, spiderfiedKey)
+  const groupInfo = useMemo(() => computeGroupInfo(restaurants, spiderfiedKey), [restaurants, spiderfiedKey])
 
   function handlePinClick(r: Restaurant) {
     const { groupKey, groupSize } = groupInfo[r.id]
@@ -213,7 +212,7 @@ export default function MapContainer({
       )}
 
       {editRestaurant && (
-        <EditPinModal
+        <AddPinModal
           restaurant={editRestaurant}
           onClose={() => setEditRestaurant(null)}
           onSaved={() => {

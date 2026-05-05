@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
 
+function filterByTagType(results: any[], names: string[], type: string): any[] {
+  if (names.length === 0) return results
+  return results.filter((r: any) =>
+    names.some((name) => r.tags.some((t: any) => t.name === name && t.type === type))
+  )
+}
+
 function parseEWKBPoint(hex: string): [number, number] | null {
   try {
     const buf = Buffer.from(hex, 'hex')
@@ -68,37 +75,10 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  if (cuisineTags.length > 0) {
-    results = results.filter((r: any) =>
-      cuisineTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'cuisine')
-      )
-    )
-  }
-
-  if (dishTags.length > 0) {
-    results = results.filter((r: any) =>
-      dishTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'dish')
-      )
-    )
-  }
-
-  if (tasteTags.length > 0) {
-    results = results.filter((r: any) =>
-      tasteTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'taste')
-      )
-    )
-  }
-
-  if (sceneTags.length > 0) {
-    results = results.filter((r: any) =>
-      sceneTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'scene')
-      )
-    )
-  }
+  results = filterByTagType(results, cuisineTags, 'cuisine')
+  results = filterByTagType(results, dishTags, 'dish')
+  results = filterByTagType(results, tasteTags, 'taste')
+  results = filterByTagType(results, sceneTags, 'scene')
 
   if (ratingsFilter.length > 0) {
     results = results.filter((r: any) => ratingsFilter.includes(r.rating))
