@@ -591,6 +591,15 @@ export default function FilterPanel({
             登录留言
           </button>
         )}
+        <div style={{ borderTop: '1px solid var(--fm-line)', marginTop: 10, paddingTop: 10 }}>
+          <Link
+            href="/about"
+            style={{ fontSize: 11.5, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)' }}
+            className="about-back-link"
+          >
+            关于食迹
+          </Link>
+        </div>
       </div>
     </aside>
   )
