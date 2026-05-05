@@ -33,6 +33,8 @@ export default function TagInput({
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingCreate, setPendingCreate] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const typeTags = allTags.filter((t) => t.type === type)
@@ -82,7 +84,6 @@ export default function TagInput({
   async function createTag() {
     const name = search.trim()
     if (!name) return
-    if (!confirm(`新建${TYPE_LABELS[type]}标签「${name}」？\n\n如果是招牌菜，请在「招牌菜」字段填写，而不是在此新建标签。`)) return
     setCreating(true)
     try {
       const res = await fetch('/api/tags', {
@@ -95,19 +96,20 @@ export default function TagInput({
       onTagCreated(tag)
       onChange([...selectedIds, tag.id])
       setSearch('')
+      setPendingCreate(false)
     } finally {
       setCreating(false)
     }
   }
 
-  async function deleteTag(tag: Tag) {
-    if (!confirm(`删除标签「${tag.name}」？此操作会从所有餐馆中移除该标签。`)) return
-    setDeletingId(tag.id)
+  async function deleteTag(tagId: string) {
+    setDeletingId(tagId)
+    setConfirmDeleteId(null)
     try {
-      const res = await fetch(`/api/tags/${tag.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
       if (!res.ok) return
-      onChange(selectedIds.filter((id) => id !== tag.id))
-      onTagDeleted?.(tag.id)
+      onChange(selectedIds.filter((id) => id !== tagId))
+      onTagDeleted?.(tagId)
     } finally {
       setDeletingId(null)
     }
@@ -246,11 +248,12 @@ export default function TagInput({
         ref={inputRef}
         placeholder={`自定义${TYPE_LABELS[type]}…`}
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => { setSearch(e.target.value); setPendingCreate(false) }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
-            if (!exactMatch && search.trim()) createTag()
+            if (pendingCreate) { createTag(); return }
+            if (!exactMatch && search.trim()) setPendingCreate(true)
             else if (filtered.length === 1) { toggle(filtered[0].id); setSearch('') }
           }
         }}
@@ -286,9 +289,9 @@ export default function TagInput({
             >
               + {t.name}
             </button>
-            {canManage && (
+            {canManage && confirmDeleteId !== t.id && (
               <button
-                onClick={(e) => { e.stopPropagation(); deleteTag(t) }}
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(t.id) }}
                 disabled={deletingId === t.id}
                 title="删除此标签"
                 style={{
@@ -307,11 +310,27 @@ export default function TagInput({
                 ×
               </button>
             )}
+            {canManage && confirmDeleteId === t.id && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 2 }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteTag(t.id) }}
+                  style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, border: '1px solid var(--fm-orange)', background: 'transparent', color: 'var(--fm-orange-dark)', cursor: 'pointer' }}
+                >
+                  删除
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null) }}
+                  style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, border: '1px solid var(--fm-line-2)', background: 'transparent', color: 'var(--fm-ink-4)', cursor: 'pointer' }}
+                >
+                  取消
+                </button>
+              </div>
+            )}
           </div>
         ))}
-        {search && !exactMatch && search.trim() && (
+        {search && !exactMatch && search.trim() && !pendingCreate && (
           <button
-            onClick={createTag}
+            onClick={() => setPendingCreate(true)}
             className="fm-tag"
             style={{
               cursor: 'pointer',
@@ -320,8 +339,32 @@ export default function TagInput({
               color: 'var(--fm-orange-dark)',
             }}
           >
-            {creating ? '创建中…' : `+ 新建 "${search.trim()}"`}
+            {`+ 新建 "${search.trim()}"`}
           </button>
+        )}
+        {search && !exactMatch && search.trim() && pendingCreate && (
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {type === 'dish' && (
+              <p style={{ margin: 0, fontSize: 11.5, color: 'var(--fm-ink-3)', lineHeight: 1.5 }}>
+                如果是招牌菜，请在「招牌菜」字段填写，而不是新建标签。
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={createTag}
+                disabled={creating}
+                style={{ fontSize: 12, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--fm-orange)', background: 'transparent', color: 'var(--fm-orange-dark)', cursor: 'pointer' }}
+              >
+                {creating ? '创建中…' : `新建「${search.trim()}」`}
+              </button>
+              <button
+                onClick={() => setPendingCreate(false)}
+                style={{ fontSize: 12, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--fm-line-2)', background: 'transparent', color: 'var(--fm-ink-4)', cursor: 'pointer' }}
+              >
+                取消
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
