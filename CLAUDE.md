@@ -1,4 +1,4 @@
-# FoodMap — Project Guide for Claude
+# 食迹 — Project Guide for Claude
 
 ## What This Is
 

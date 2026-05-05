@@ -151,7 +151,7 @@ export default function FilterPanel({
               lineHeight: 1,
             }}
           >
-            FoodMap<span style={{ color: 'var(--fm-orange)' }}>.</span>
+            食迹<span style={{ color: 'var(--fm-orange)' }}>.</span>
           </div>
 
           <div className="flex items-center gap-2">
