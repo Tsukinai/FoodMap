@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import type { Tag, FilterPayload, RestaurantStatus, RestaurantRating } from '@/lib/types'
 import { RATING_ORDER } from '@/lib/types'
 import { getRatingStyle } from '@/components/map/AddPinModal'
-import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { CUISINE_STYLES } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
+import { signIn, signOut } from '@/lib/auth'
 
 interface Props {
   allTags: Tag[]
@@ -34,7 +34,6 @@ export default function FilterPanel({
   viewMode = 'map' as 'map' | 'list' | 'guestbook',
   onViewModeChange,
 }: Props) {
-  const supabase = createClient()
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
   function toggleExpand(id: string) {
@@ -45,31 +44,22 @@ export default function FilterPanel({
     })
   }
 
-  async function signIn() {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${location.origin}/auth/callback` },
-    })
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut()
-    location.reload()
-  }
-
   // ── Tag helpers ──────────────────────────────────────────────────────────
-  const cuisineTopLevel = allTags.filter((t) => t.type === 'cuisine' && !t.parent_id)
-  const cuisineSub      = allTags.filter((t) => t.type === 'cuisine' && !!t.parent_id)
-  const childrenByParent = new Map<string, Tag[]>()
-  cuisineSub.forEach(tag => {
-    if (!tag.parent_id) return
-    const list = childrenByParent.get(tag.parent_id) ?? []
-    list.push(tag)
-    childrenByParent.set(tag.parent_id, list)
-  })
-  const dishTags        = allTags.filter((t) => t.type === 'dish')
-  const tasteTags       = allTags.filter((t) => t.type === 'taste')
-  const sceneTags       = allTags.filter((t) => t.type === 'scene')
+  const cuisineTopLevel = useMemo(() => allTags.filter((t) => t.type === 'cuisine' && !t.parent_id), [allTags])
+  const cuisineSub      = useMemo(() => allTags.filter((t) => t.type === 'cuisine' && !!t.parent_id), [allTags])
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, Tag[]>()
+    cuisineSub.forEach(tag => {
+      if (!tag.parent_id) return
+      const list = map.get(tag.parent_id) ?? []
+      list.push(tag)
+      map.set(tag.parent_id, list)
+    })
+    return map
+  }, [cuisineSub])
+  const dishTags  = useMemo(() => allTags.filter((t) => t.type === 'dish'),  [allTags])
+  const tasteTags = useMemo(() => allTags.filter((t) => t.type === 'taste'), [allTags])
+  const sceneTags = useMemo(() => allTags.filter((t) => t.type === 'scene'), [allTags])
 
   // ── Toggle helpers ───────────────────────────────────────────────────────
   function toggleArr(key: keyof FilterPayload, name: string) {
@@ -300,8 +290,7 @@ export default function FilterPanel({
                 const children = childrenByParent.get(tag.id) ?? []
                 const isExpanded = expandedParents.has(tag.id)
                 const active = filters.cuisine_tags.includes(tag.name)
-                const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
-                const bg = CUISINE_BG[tag.name]     ?? 'var(--fm-muted)'
+                const { color: fg, bg } = CUISINE_STYLES[tag.name] ?? { color: 'var(--fm-ink-2)', bg: 'var(--fm-muted)' }
                 return (
                   <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <button
@@ -355,7 +344,7 @@ export default function FilterPanel({
             {cuisineTopLevel
               .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
               .map(parent => {
-                const parentFg = CUISINE_COLORS[parent.name] ?? 'var(--fm-ink-2)'
+                const parentFg = CUISINE_STYLES[parent.name]?.color ?? 'var(--fm-ink-2)'
                 return (
                   <div
                     key={parent.id}
@@ -369,8 +358,8 @@ export default function FilterPanel({
                   >
                     {childrenByParent.get(parent.id)!.map(child => {
                       const childActive = filters.cuisine_tags.includes(child.name)
-                      const childFg = CUISINE_COLORS[child.name] ?? parentFg
-                      const childBg = CUISINE_BG[child.name] ?? 'var(--fm-muted)'
+                      const childFg = CUISINE_STYLES[child.name]?.color ?? parentFg
+                      const childBg = CUISINE_STYLES[child.name]?.bg ?? 'var(--fm-muted)'
                       return (
                         <button
                           key={child.id}

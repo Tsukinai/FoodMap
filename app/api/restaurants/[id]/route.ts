@@ -26,9 +26,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { error } = await supabase.from('restaurants').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Replace tags if provided
+  // Replace tags if provided — backup current rows so we can restore on insert failure
   if (cuisine_tag_ids !== undefined || dish_tag_ids !== undefined || taste_tag_ids !== undefined || scene_tag_ids !== undefined) {
+    const { data: backup } = await supabase
+      .from('restaurant_tags')
+      .select('tag_id')
+      .eq('restaurant_id', id)
+
     await supabase.from('restaurant_tags').delete().eq('restaurant_id', id)
+
     const tagIds = [
       ...(cuisine_tag_ids ?? []),
       ...(dish_tag_ids ?? []),
@@ -36,9 +42,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       ...(scene_tag_ids ?? []),
     ]
     if (tagIds.length > 0) {
-      await supabase.from('restaurant_tags').insert(
+      const { error: insertError } = await supabase.from('restaurant_tags').insert(
         tagIds.map((tag_id: string) => ({ restaurant_id: id, tag_id }))
       )
+      if (insertError) {
+        if (backup?.length) {
+          await supabase.from('restaurant_tags').insert(
+            backup.map(t => ({ restaurant_id: id, tag_id: t.tag_id }))
+          )
+        }
+        return NextResponse.json({ error: insertError.message }, { status: 500 })
+      }
     }
   }
 

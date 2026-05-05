@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
 
+function filterByTagType(results: any[], names: string[], type: string): any[] {
+  if (names.length === 0) return results
+  return results.filter((r: any) =>
+    names.some((name) => r.tags.some((t: any) => t.name === name && t.type === type))
+  )
+}
+
 function parseEWKBPoint(hex: string): [number, number] | null {
   try {
     const buf = Buffer.from(hex, 'hex')
@@ -22,9 +29,12 @@ export async function GET(request: NextRequest) {
   const dishTags = searchParams.get('dish_tags')?.split(',').filter(Boolean) ?? []
   const tasteTags = searchParams.get('taste_tags')?.split(',').filter(Boolean) ?? []
   const sceneTags = searchParams.get('scene_tags')?.split(',').filter(Boolean) ?? []
-  const maxCost = searchParams.get('max_cost') ? Number(searchParams.get('max_cost')) : null
-  const minCost = searchParams.get('min_cost') ? Number(searchParams.get('min_cost')) : null
-  const statusFilter = searchParams.get('status')?.split(',').filter(Boolean) ?? []
+  const maxCostRaw = Number(searchParams.get('max_cost'))
+  const minCostRaw = Number(searchParams.get('min_cost'))
+  const maxCost = searchParams.get('max_cost') && Number.isFinite(maxCostRaw) ? maxCostRaw : null
+  const minCost = searchParams.get('min_cost') && Number.isFinite(minCostRaw) ? minCostRaw : null
+  const VALID_STATUSES = new Set(['want', 'visited'])
+  const statusFilter = (searchParams.get('status')?.split(',').filter(Boolean) ?? []).filter(s => VALID_STATUSES.has(s))
   const ratingsFilter = searchParams.get('ratings')?.split(',').filter(Boolean) ?? []
 
   const supabase = await createClient()
@@ -65,37 +75,10 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  if (cuisineTags.length > 0) {
-    results = results.filter((r: any) =>
-      cuisineTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'cuisine')
-      )
-    )
-  }
-
-  if (dishTags.length > 0) {
-    results = results.filter((r: any) =>
-      dishTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'dish')
-      )
-    )
-  }
-
-  if (tasteTags.length > 0) {
-    results = results.filter((r: any) =>
-      tasteTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'taste')
-      )
-    )
-  }
-
-  if (sceneTags.length > 0) {
-    results = results.filter((r: any) =>
-      sceneTags.some((name) =>
-        r.tags.some((t: any) => t.name === name && t.type === 'scene')
-      )
-    )
-  }
+  results = filterByTagType(results, cuisineTags, 'cuisine')
+  results = filterByTagType(results, dishTags, 'dish')
+  results = filterByTagType(results, tasteTags, 'taste')
+  results = filterByTagType(results, sceneTags, 'scene')
 
   if (ratingsFilter.length > 0) {
     results = results.filter((r: any) => ratingsFilter.includes(r.rating))

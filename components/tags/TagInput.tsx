@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import type { Tag, TagType } from '@/lib/types'
-import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { CUISINE_STYLES } from '@/lib/constants'
 
 interface Props {
   type: TagType
@@ -89,6 +89,7 @@ export default function TagInput({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type }),
       })
+      if (!res.ok) return
       const tag: Tag = await res.json()
       onTagCreated(tag)
       onChange([...selectedIds, tag.id])
@@ -102,7 +103,8 @@ export default function TagInput({
     if (!confirm(`删除标签「${tag.name}」？此操作会从所有餐馆中移除该标签。`)) return
     setDeletingId(tag.id)
     try {
-      await fetch(`/api/tags/${tag.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/tags/${tag.id}`, { method: 'DELETE' })
+      if (!res.ok) return
       onChange(selectedIds.filter((id) => id !== tag.id))
       onTagDeleted?.(tag.id)
     } finally {
@@ -129,8 +131,7 @@ export default function TagInput({
               const children = childrenByParent.get(tag.id) ?? []
               const isExpanded = expandedParents.has(tag.id)
               if (type === 'cuisine') {
-                const fg = CUISINE_COLORS[tag.name] ?? 'var(--fm-ink-2)'
-                const bg = CUISINE_BG[tag.name] ?? 'var(--fm-muted)'
+                const { color: fg, bg } = CUISINE_STYLES[tag.name] ?? { color: 'var(--fm-ink-2)', bg: 'var(--fm-muted)' }
                 return (
                   <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <button
@@ -195,7 +196,7 @@ export default function TagInput({
           {type === 'cuisine' && topLevel
             .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
             .map(parent => {
-              const parentFg = CUISINE_COLORS[parent.name] ?? 'var(--fm-ink-2)'
+              const parentFg = CUISINE_STYLES[parent.name]?.color ?? 'var(--fm-ink-2)'
               return (
                 <div
                   key={parent.id}
@@ -209,8 +210,8 @@ export default function TagInput({
                 >
                   {childrenByParent.get(parent.id)!.map(child => {
                     const childActive = selectedIds.includes(child.id)
-                    const childFg = CUISINE_COLORS[child.name] ?? parentFg
-                    const childBg = CUISINE_BG[child.name] ?? 'var(--fm-muted)'
+                    const childFg = CUISINE_STYLES[child.name]?.color ?? parentFg
+                    const childBg = CUISINE_STYLES[child.name]?.bg ?? 'var(--fm-muted)'
                     return (
                       <button
                         key={child.id}

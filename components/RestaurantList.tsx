@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { Restaurant } from '@/lib/types'
-import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { CUISINE_STYLES } from '@/lib/constants'
 import { getRatingStyle } from '@/components/map/AddPinModal'
-import EditPinModal from '@/components/map/EditPinModal'
+import AddPinModal from '@/components/map/AddPinModal'
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20]
 
@@ -16,8 +16,8 @@ interface Props {
 }
 
 function TagBadge({ name, type }: { name: string; type: string }) {
-  const color = type === 'cuisine' ? (CUISINE_COLORS[name] ?? '#6b635a') : '#6b635a'
-  const bg = type === 'cuisine' ? (CUISINE_BG[name] ?? '#f5f0e8') : '#f5f0e8'
+  const color = type === 'cuisine' ? (CUISINE_STYLES[name]?.color ?? '#6b635a') : '#6b635a'
+  const bg = type === 'cuisine' ? (CUISINE_STYLES[name]?.bg ?? '#f5f0e8') : '#f5f0e8'
   return (
     <span
       style={{
@@ -40,8 +40,8 @@ function TagBadge({ name, type }: { name: string; type: string }) {
 
 function CuisineAvatar({ tags }: { tags: Restaurant['tags'] }) {
   const cuisine = tags.find((t) => t.type === 'cuisine')
-  const color = cuisine ? (CUISINE_COLORS[cuisine.name] ?? '#6b635a') : '#a39a8d'
-  const bg = cuisine ? (CUISINE_BG[cuisine.name] ?? '#f5f0e8') : '#f0ebe0'
+  const color = cuisine ? (CUISINE_STYLES[cuisine.name]?.color ?? '#6b635a') : '#a39a8d'
+  const bg = cuisine ? (CUISINE_STYLES[cuisine.name]?.bg ?? '#f5f0e8') : '#f0ebe0'
   const emoji = getCuisineEmoji(cuisine?.name)
   return (
     <div
@@ -81,11 +81,10 @@ export default function RestaurantList({ restaurants, loading, isOwner, onSaved 
   const [pageSize, setPageSize] = useState(5)
   const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
 
-  useEffect(() => { setPage(0) }, [restaurants])
-  useEffect(() => { setPage(0) }, [pageSize])
+  useEffect(() => { setPage(0) }, [restaurants, pageSize])
 
-  const totalPages = Math.max(1, Math.ceil(restaurants.length / pageSize))
-  const pageItems = restaurants.slice(page * pageSize, (page + 1) * pageSize)
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(restaurants.length / pageSize)), [restaurants.length, pageSize])
+  const pageItems = useMemo(() => restaurants.slice(page * pageSize, (page + 1) * pageSize), [restaurants, page, pageSize])
 
   const btnBase: React.CSSProperties = {
     fontFamily: 'var(--font-geist-mono)',
@@ -252,7 +251,7 @@ export default function RestaurantList({ restaurants, loading, isOwner, onSaved 
       </div>
 
       {editRestaurant && (
-        <EditPinModal
+        <AddPinModal
           restaurant={editRestaurant}
           onClose={() => setEditRestaurant(null)}
           onSaved={() => {
@@ -289,6 +288,7 @@ function RestaurantCard({
 
   return (
     <div
+      className="fm-list-card"
       style={{
         background: 'var(--fm-paper)',
         borderRadius: 14,
@@ -300,12 +300,6 @@ function RestaurantCard({
         transition: 'box-shadow 0.15s ease',
       }}
       onClick={onClick}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.10)'
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
-      }}
     >
       <CuisineAvatar tags={r.tags} />
 

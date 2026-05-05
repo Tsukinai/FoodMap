@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Marker, Popup } from 'react-map-gl/maplibre'
 import type { Restaurant } from '@/lib/types'
-import { CUISINE_COLORS, CUISINE_BG } from '@/lib/constants'
+import { CUISINE_STYLES } from '@/lib/constants'
 import { getRatingStyle } from '@/components/map/AddPinModal'
 
 interface Props {
@@ -22,15 +22,14 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
   const [deleting, setDeleting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const cuisineTags = restaurant.tags.filter((t) => t.type === 'cuisine')
-  const dishTags    = restaurant.tags.filter((t) => t.type === 'dish')
-  const tasteTags   = restaurant.tags.filter((t) => t.type === 'taste')
-  const sceneTags   = restaurant.tags.filter((t) => t.type === 'scene')
+  const cuisineTags = useMemo(() => restaurant.tags.filter((t) => t.type === 'cuisine'), [restaurant.tags])
+  const dishTags    = useMemo(() => restaurant.tags.filter((t) => t.type === 'dish'),    [restaurant.tags])
+  const tasteTags   = useMemo(() => restaurant.tags.filter((t) => t.type === 'taste'),   [restaurant.tags])
+  const sceneTags   = useMemo(() => restaurant.tags.filter((t) => t.type === 'scene'),   [restaurant.tags])
 
   // Pick colour from first cuisine tag, fall back to orange
   const primaryCuisine = cuisineTags[0]?.name
-  const pinColor  = CUISINE_COLORS[primaryCuisine ?? ''] ?? 'var(--fm-orange)'
-  const pinBg     = CUISINE_BG[primaryCuisine ?? '']    ?? '#fdf0e6'
+  const { color: pinColor, bg: pinBg } = CUISINE_STYLES[primaryCuisine ?? ''] ?? { color: 'var(--fm-orange)', bg: '#fdf0e6' }
 
   const cost = restaurant.cost_min && restaurant.cost_max
     ? `S$ ${restaurant.cost_min}–${restaurant.cost_max}`
@@ -42,8 +41,18 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
   async function handleDelete() {
     setDeleting(true)
-    await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
-    onRefresh()
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        onRefresh()
+      } else {
+        setDeleting(false)
+        setConfirmingDelete(false)
+      }
+    } catch {
+      setDeleting(false)
+      setConfirmingDelete(false)
+    }
   }
 
   const [offsetX, offsetY] = pixelOffset ?? [0, 0]
@@ -251,7 +260,8 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
               {/* Signature dishes */}
               {restaurant.signature_dishes?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>招牌菜</span>
                   {restaurant.signature_dishes.map((d) => (
                     <span
                       key={d}
@@ -273,19 +283,31 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
               {/* Tags */}
               {(cuisineTags.length > 0 || dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                  {cuisineTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>
-                  ))}
-                  {dishTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>
-                  ))}
-                  {tasteTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-taste">{t.name}</span>
-                  ))}
-                  {sceneTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-scene">{t.name}</span>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                  {cuisineTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>菜系</span>
+                      {cuisineTags.map((t) => <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>)}
+                    </div>
+                  )}
+                  {dishTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>菜品</span>
+                      {dishTags.map((t) => <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>)}
+                    </div>
+                  )}
+                  {tasteTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>口味</span>
+                      {tasteTags.map((t) => <span key={t.id} className="fm-tag fm-tag-taste">{t.name}</span>)}
+                    </div>
+                  )}
+                  {sceneTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>场景</span>
+                      {sceneTags.map((t) => <span key={t.id} className="fm-tag fm-tag-scene">{t.name}</span>)}
+                    </div>
+                  )}
                 </div>
               )}
 
