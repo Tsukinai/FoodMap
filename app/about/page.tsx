@@ -75,7 +75,36 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="mt-16 text-xs" style={{ color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)' }}>
+        <div className="mt-16 pt-8 text-[13px] leading-relaxed" style={{ borderTop: '1px solid var(--fm-line)', color: 'var(--fm-ink-3)' }}>
+          <p>
+            这个项目开源在{' '}
+            <a
+              href="https://github.com/Tsukinai/FoodMap"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="about-back-link"
+              style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+            >
+              GitHub
+            </a>
+            {' '}，欢迎来玩
+          </p>
+          <p className="mt-2" style={{ color: 'var(--fm-ink-4)' }}>
+            提 issue 推荐餐馆、找 bug、或者赞助作者吃饭都行（笑
+          </p>
+          <p className="mt-2">
+            联系我：{' '}
+            <a
+              href="mailto:shinomiyatsukinai@gmail.com"
+              className="about-back-link"
+              style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}
+            >
+              shinomiyatsukinai@gmail.com
+            </a>
+          </p>
+        </div>
+
+        <div className="mt-8 text-xs" style={{ color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)' }}>
           食迹 · 新加坡
         </div>
 
