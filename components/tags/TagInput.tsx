@@ -82,6 +82,7 @@ export default function TagInput({
   async function createTag() {
     const name = search.trim()
     if (!name) return
+    if (!confirm(`新建${TYPE_LABELS[type]}标签「${name}」？\n\n如果是招牌菜，请在「招牌菜」字段填写，而不是在此新建标签。`)) return
     setCreating(true)
     try {
       const res = await fetch('/api/tags', {

@@ -20,7 +20,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "FoodMap — 新加坡美食地图",
+  title: "食迹 — 新加坡美食地图",
   description: "记录新加坡美食的个人地图",
 };
 

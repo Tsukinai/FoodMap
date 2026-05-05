@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -38,6 +38,7 @@ export default function HomePage() {
   const [isOwner, setIsOwner] = useState(false)
   const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
@@ -109,6 +110,12 @@ export default function HomePage() {
     }
   }, [])
 
+  const displayedRestaurants = useMemo(() => {
+    if (!searchQuery.trim()) return allRestaurants
+    const q = searchQuery.trim().toLowerCase()
+    return allRestaurants.filter(r => r.name.toLowerCase().includes(q))
+  }, [allRestaurants, searchQuery])
+
   useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
 
@@ -146,44 +153,44 @@ export default function HomePage() {
           allTags={allTags}
           filters={filters}
           onChange={setFilters}
-          restaurantCount={allRestaurants.length}
+          restaurantCount={displayedRestaurants.length}
           user={user}
           isOwner={isOwner}
           onCollapse={() => setSidebarOpen(false)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
       </div>
 
       {/* Map area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Floating expand button (shown when sidebar is collapsed) */}
-        {!sidebarOpen && (
-          <button
-            onClick={() => setSidebarOpen(true)}
-            title="展开侧边栏"
-            style={{
-              position: 'absolute',
-              left: 16,
-              top: 16,
-              zIndex: 10,
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: 'var(--fm-paper)',
-              border: '1px solid var(--fm-line)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 15,
-              color: 'var(--fm-ink)',
-              cursor: 'pointer',
-            }}
-          >
-            ▸
-          </button>
-        )}
+        {/* Hamburger toggle — always visible */}
+        <button
+          onClick={() => setSidebarOpen(s => !s)}
+          title={sidebarOpen ? '收起筛选' : '展开筛选'}
+          style={{
+            position: 'absolute',
+            left: 16,
+            top: 16,
+            zIndex: 10,
+            width: 38,
+            height: 38,
+            borderRadius: 10,
+            background: 'var(--fm-paper)',
+            border: '1px solid var(--fm-line)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 17,
+            color: 'var(--fm-ink)',
+            cursor: 'pointer',
+          }}
+        >
+          ☰
+        </button>
 
         {/* Main content: map, list, or guestbook */}
         <div className="flex-1 relative">
@@ -191,7 +198,7 @@ export default function HomePage() {
             <GuestbookPanel user={user} isOwner={isOwner} />
           ) : viewMode === 'list' ? (
             <RestaurantList
-              restaurants={allRestaurants}
+              restaurants={displayedRestaurants}
               loading={loading}
               isOwner={isOwner}
               onSaved={() => { fetchRestaurants(); fetchTags() }}
@@ -205,7 +212,7 @@ export default function HomePage() {
             </div>
           ) : (
             <MapContainer
-              restaurants={allRestaurants}
+              restaurants={displayedRestaurants}
               isOwner={isOwner}
               filters={filters}
               addingPin={addingPin}

@@ -241,6 +241,8 @@
 /* ── Hover utility classes (replace JS onMouseEnter/Leave) ── */
 .fm-list-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
 .fm-dropdown-item:hover { background: var(--fm-muted) !important; }
+.about-back-link { color: var(--fm-ink-3); }
+.about-back-link:hover { color: var(--fm-ink); }
 .fm-delete-btn:hover { color: var(--fm-error) !important; }
 
 /* ── Mobile responsive overrides ── */
