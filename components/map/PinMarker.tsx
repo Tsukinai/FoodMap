@@ -260,7 +260,8 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
               {/* Signature dishes */}
               {restaurant.signature_dishes?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>招牌菜</span>
                   {restaurant.signature_dishes.map((d) => (
                     <span
                       key={d}
@@ -282,19 +283,31 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
               {/* Tags */}
               {(cuisineTags.length > 0 || dishTags.length > 0 || tasteTags.length > 0 || sceneTags.length > 0) && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                  {cuisineTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>
-                  ))}
-                  {dishTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>
-                  ))}
-                  {tasteTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-taste">{t.name}</span>
-                  ))}
-                  {sceneTags.map((t) => (
-                    <span key={t.id} className="fm-tag fm-tag-scene">{t.name}</span>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 10 }}>
+                  {cuisineTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>菜系</span>
+                      {cuisineTags.map((t) => <span key={t.id} className="fm-tag fm-tag-cuisine">{t.name}</span>)}
+                    </div>
+                  )}
+                  {dishTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>菜品</span>
+                      {dishTags.map((t) => <span key={t.id} className="fm-tag fm-tag-dish">{t.name}</span>)}
+                    </div>
+                  )}
+                  {tasteTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>口味</span>
+                      {tasteTags.map((t) => <span key={t.id} className="fm-tag fm-tag-taste">{t.name}</span>)}
+                    </div>
+                  )}
+                  {sceneTags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)', marginRight: 2 }}>场景</span>
+                      {sceneTags.map((t) => <span key={t.id} className="fm-tag fm-tag-scene">{t.name}</span>)}
+                    </div>
+                  )}
                 </div>
               )}
 
