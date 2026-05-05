@@ -41,8 +41,8 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
-  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
 
   const supabase = createClient()
