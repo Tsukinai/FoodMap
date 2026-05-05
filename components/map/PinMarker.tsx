@@ -42,8 +42,18 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
 
   async function handleDelete() {
     setDeleting(true)
-    await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
-    onRefresh()
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        onRefresh()
+      } else {
+        setDeleting(false)
+        setConfirmingDelete(false)
+      }
+    } catch {
+      setDeleting(false)
+      setConfirmingDelete(false)
+    }
   }
 
   const [offsetX, offsetY] = pixelOffset ?? [0, 0]

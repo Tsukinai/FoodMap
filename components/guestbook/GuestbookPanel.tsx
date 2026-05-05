@@ -72,8 +72,8 @@ export default function GuestbookPanel({ user, isOwner }: Props) {
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/messages/${id}`, { method: 'DELETE' })
-    setMessages(prev => prev.filter(m => m.id !== id))
+    const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' })
+    if (res.ok) setMessages(prev => prev.filter(m => m.id !== id))
   }
 
   async function handleReply(id: string) {

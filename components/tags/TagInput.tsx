@@ -89,6 +89,7 @@ export default function TagInput({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, type }),
       })
+      if (!res.ok) return
       const tag: Tag = await res.json()
       onTagCreated(tag)
       onChange([...selectedIds, tag.id])
@@ -102,7 +103,8 @@ export default function TagInput({
     if (!confirm(`删除标签「${tag.name}」？此操作会从所有餐馆中移除该标签。`)) return
     setDeletingId(tag.id)
     try {
-      await fetch(`/api/tags/${tag.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/tags/${tag.id}`, { method: 'DELETE' })
+      if (!res.ok) return
       onChange(selectedIds.filter((id) => id !== tag.id))
       onTagDeleted?.(tag.id)
     } finally {

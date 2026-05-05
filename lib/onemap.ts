@@ -24,11 +24,13 @@ export async function searchOneMap(query: string): Promise<OneMapResult[]> {
 }
 
 export function parseOneMapResult(result: OneMapResult) {
+  const lng = parseFloat(result.LONGITUDE)
+  const lat = parseFloat(result.LATITUDE)
   return {
     address: result.ADDRESS,
     postal_code: result.POSTAL,
     // Note: API field is correctly spelled LONGITUDE (not LONGTITUDE as in some older docs)
-    lng: parseFloat(result.LONGITUDE),
-    lat: parseFloat(result.LATITUDE),
+    lng: Number.isFinite(lng) ? lng : null,
+    lat: Number.isFinite(lat) ? lat : null,
   }
 }

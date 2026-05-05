@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -73,16 +73,20 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', update)
   }, [])
 
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
+
   const fetchRestaurants = useCallback(async () => {
+    const f = filtersRef.current
     const params = new URLSearchParams()
-    if (filters.cuisine_tags.length > 0) params.set('cuisine_tags', filters.cuisine_tags.join(','))
-    if (filters.dish_tags.length > 0) params.set('dish_tags', filters.dish_tags.join(','))
-    if (filters.taste_tags?.length > 0) params.set('taste_tags', filters.taste_tags.join(','))
-    if (filters.scene_tags?.length > 0) params.set('scene_tags', filters.scene_tags.join(','))
-    if (filters.max_cost) params.set('max_cost', String(filters.max_cost))
-    if (filters.min_cost) params.set('min_cost', String(filters.min_cost))
-    if (filters.status?.length === 1) params.set('status', filters.status[0])
-    if (filters.ratings?.length > 0) params.set('ratings', filters.ratings.join(','))
+    if (f.cuisine_tags.length > 0) params.set('cuisine_tags', f.cuisine_tags.join(','))
+    if (f.dish_tags.length > 0) params.set('dish_tags', f.dish_tags.join(','))
+    if (f.taste_tags?.length > 0) params.set('taste_tags', f.taste_tags.join(','))
+    if (f.scene_tags?.length > 0) params.set('scene_tags', f.scene_tags.join(','))
+    if (f.max_cost) params.set('max_cost', String(f.max_cost))
+    if (f.min_cost) params.set('min_cost', String(f.min_cost))
+    if (f.status?.length === 1) params.set('status', f.status[0])
+    if (f.ratings?.length > 0) params.set('ratings', f.ratings.join(','))
 
     try {
       const res = await fetch(`/api/restaurants?${params}`)
@@ -93,7 +97,7 @@ export default function HomePage() {
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [])
 
   const fetchTags = useCallback(async () => {
     try {
@@ -105,7 +109,7 @@ export default function HomePage() {
     }
   }, [])
 
-  useEffect(() => { fetchRestaurants() }, [fetchRestaurants])
+  useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
 
   return (

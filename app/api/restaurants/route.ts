@@ -22,9 +22,12 @@ export async function GET(request: NextRequest) {
   const dishTags = searchParams.get('dish_tags')?.split(',').filter(Boolean) ?? []
   const tasteTags = searchParams.get('taste_tags')?.split(',').filter(Boolean) ?? []
   const sceneTags = searchParams.get('scene_tags')?.split(',').filter(Boolean) ?? []
-  const maxCost = searchParams.get('max_cost') ? Number(searchParams.get('max_cost')) : null
-  const minCost = searchParams.get('min_cost') ? Number(searchParams.get('min_cost')) : null
-  const statusFilter = searchParams.get('status')?.split(',').filter(Boolean) ?? []
+  const maxCostRaw = Number(searchParams.get('max_cost'))
+  const minCostRaw = Number(searchParams.get('min_cost'))
+  const maxCost = searchParams.get('max_cost') && Number.isFinite(maxCostRaw) ? maxCostRaw : null
+  const minCost = searchParams.get('min_cost') && Number.isFinite(minCostRaw) ? minCostRaw : null
+  const VALID_STATUSES = new Set(['want', 'visited'])
+  const statusFilter = (searchParams.get('status')?.split(',').filter(Boolean) ?? []).filter(s => VALID_STATUSES.has(s))
   const ratingsFilter = searchParams.get('ratings')?.split(',').filter(Boolean) ?? []
 
   const supabase = await createClient()
