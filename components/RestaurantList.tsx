@@ -102,7 +102,7 @@ export default function RestaurantList({ restaurants, loading, isOwner, onSaved 
     <div
       style={{
         flexShrink: 0,
-        padding: '10px 16px 10px 20px',
+        padding: '10px 16px 10px 62px',
         display: 'flex',
         alignItems: 'center',
         gap: 8,

@@ -19,6 +19,8 @@ interface Props {
   onCollapse?: () => void
   viewMode?: 'map' | 'list' | 'guestbook'
   onViewModeChange?: (mode: 'map' | 'list' | 'guestbook') => void
+  searchQuery?: string
+  onSearchChange?: (q: string) => void
 }
 
 const MAX_COST = 300
@@ -33,6 +35,8 @@ export default function FilterPanel({
   onCollapse,
   viewMode = 'map' as 'map' | 'list' | 'guestbook',
   onViewModeChange,
+  searchQuery = '',
+  onSearchChange,
 }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
@@ -154,30 +158,6 @@ export default function FilterPanel({
             食迹<span style={{ color: 'var(--fm-orange)' }}>.</span>
           </div>
 
-          <div className="flex items-center gap-2">
-          {onCollapse && (
-            <button
-              onClick={onCollapse}
-              title="折叠侧边栏"
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'var(--fm-muted)',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--fm-ink-3)',
-                fontSize: 14,
-                flexShrink: 0,
-              }}
-            >
-              ◂
-            </button>
-          )}
-          </div>
         </div>
 
         {/* View mode toggle */}
