@@ -224,6 +224,50 @@ export default function FilterPanel({
       {/* ── Scrollable filter body ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+        {/* ── Search ── */}
+        <div style={{ position: 'relative' }}>
+          <svg
+            width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fm-ink-4)', pointerEvents: 'none' }}
+          >
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="搜索餐厅名称…"
+            value={searchQuery}
+            onChange={e => onSearchChange?.(e.target.value)}
+            style={{
+              width: '100%',
+              paddingLeft: 30,
+              paddingRight: searchQuery ? 28 : 10,
+              paddingTop: 8,
+              paddingBottom: 8,
+              borderRadius: 8,
+              border: '1.5px solid var(--fm-line-2)',
+              background: 'var(--fm-cream)',
+              fontSize: 13,
+              fontFamily: 'var(--font-geist-sans)',
+              color: 'var(--fm-ink)',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange?.('')}
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--fm-ink-4)', fontSize: 14, lineHeight: 1, padding: 0,
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
         {/* ── Status ── */}
         <section>
           <FilterLabel count={filters.status?.length ?? 0}>状态</FilterLabel>

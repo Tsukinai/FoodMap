@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -38,6 +38,7 @@ export default function HomePage() {
   const [isOwner, setIsOwner] = useState(false)
   const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
@@ -109,6 +110,12 @@ export default function HomePage() {
     }
   }, [])
 
+  const displayedRestaurants = useMemo(() => {
+    if (!searchQuery.trim()) return allRestaurants
+    const q = searchQuery.trim().toLowerCase()
+    return allRestaurants.filter(r => r.name.toLowerCase().includes(q))
+  }, [allRestaurants, searchQuery])
+
   useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
 
@@ -146,12 +153,14 @@ export default function HomePage() {
           allTags={allTags}
           filters={filters}
           onChange={setFilters}
-          restaurantCount={allRestaurants.length}
+          restaurantCount={displayedRestaurants.length}
           user={user}
           isOwner={isOwner}
           onCollapse={() => setSidebarOpen(false)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
       </div>
 
@@ -189,7 +198,7 @@ export default function HomePage() {
             <GuestbookPanel user={user} isOwner={isOwner} />
           ) : viewMode === 'list' ? (
             <RestaurantList
-              restaurants={allRestaurants}
+              restaurants={displayedRestaurants}
               loading={loading}
               isOwner={isOwner}
               onSaved={() => { fetchRestaurants(); fetchTags() }}
@@ -203,7 +212,7 @@ export default function HomePage() {
             </div>
           ) : (
             <MapContainer
-              restaurants={allRestaurants}
+              restaurants={displayedRestaurants}
               isOwner={isOwner}
               filters={filters}
               addingPin={addingPin}
