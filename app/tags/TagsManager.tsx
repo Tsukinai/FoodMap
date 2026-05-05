@@ -281,7 +281,7 @@ export default function TagsManager({ initialTags }: { initialTags: Tag[] }) {
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {saveError && (
-            <span style={{ fontSize: 12, color: '#c0392b' }}>{saveError}</span>
+            <span style={{ fontSize: 12, color: 'var(--fm-error)' }}>{saveError}</span>
           )}
           {isDirty && !saving && (
             <button
@@ -640,8 +640,7 @@ function TagChip({
           fontSize: 12,
           flexShrink: 0,
         }}
-        onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'var(--fm-ink-4)')}
+        className="fm-delete-btn"
       >
         ×
       </button>

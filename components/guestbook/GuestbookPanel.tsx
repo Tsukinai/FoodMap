@@ -247,7 +247,7 @@ export default function GuestbookPanel({ user, isOwner }: Props) {
                         <button
                           onClick={() => handleDelete(msg.id)}
                           style={{
-                            fontSize: 11, color: '#c0392b', background: 'none', border: 'none',
+                            fontSize: 11, color: 'var(--fm-error)', background: 'none', border: 'none',
                             cursor: 'pointer', padding: '2px 6px', borderRadius: 4,
                             fontFamily: 'var(--font-geist-mono)',
                           }}

@@ -30,5 +30,5 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const { error } = await supabase.from('messages').delete().eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return new NextResponse(null, { status: 204 })
+  return NextResponse.json({ success: true })
 }

@@ -229,10 +229,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                   {geoResults.map((r, i) => (
                     <button
                       key={i}
-                      className="w-full text-left px-3 py-2.5 text-base transition-colors"
+                      className="fm-dropdown-item w-full text-left px-3 py-2.5 text-base"
                       style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--fm-muted)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       onClick={() => selectGeoResult(r)}
                     >
                       {r.address}
@@ -268,10 +266,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                       {chainResults.map((r) => (
                         <button
                           key={r.id}
-                          className="w-full text-left px-3 py-2.5 text-base transition-colors"
+                          className="fm-dropdown-item w-full text-left px-3 py-2.5 text-base"
                           style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--fm-muted)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                           onClick={() => applyChainTemplate(r)}
                         >
                           <span style={{ fontWeight: 500 }}>{r.name}</span>

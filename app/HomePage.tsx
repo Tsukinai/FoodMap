@@ -41,8 +41,8 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(true)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : false)
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
 
   const supabase = createClient()
@@ -119,7 +119,7 @@ export default function HomePage() {
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0"
-          style={{ background: 'rgba(31,28,24,0.4)', zIndex: 40 }}
+          style={{ background: 'var(--fm-overlay)', zIndex: 40 }}
           onClick={() => setSidebarOpen(false)}
         />
       )}

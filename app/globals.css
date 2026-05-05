@@ -120,6 +120,8 @@
     --fm-cream: #f5f1e8;
     --fm-paper: #fbf8f1;
     --fm-muted: #ece5d2;
+    --fm-error: #c0392b;
+    --fm-overlay: rgba(31, 28, 24, 0.4);
   }
   * {
     @apply border-border outline-ring/50;
@@ -235,6 +237,11 @@
   font-size: 9px;
   font-weight: 700;
 }
+
+/* ── Hover utility classes (replace JS onMouseEnter/Leave) ── */
+.fm-list-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.10); }
+.fm-dropdown-item:hover { background: var(--fm-muted) !important; }
+.fm-delete-btn:hover { color: var(--fm-error) !important; }
 
 /* ── Mobile responsive overrides ── */
 @media (max-width: 640px) {
