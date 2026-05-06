@@ -24,8 +24,6 @@ interface Props {
   showViewToggle?: boolean
 }
 
-const MAX_COST = 300
-
 export default function FilterPanel({
   allTags,
   filters,
@@ -80,7 +78,7 @@ export default function FilterPanel({
   }
 
   function handleCostMax(e: React.ChangeEvent<HTMLInputElement>) {
-    const v = e.target.value === '' ? null : Math.min(MAX_COST, Number(e.target.value))
+    const v = e.target.value === '' ? null : Number(e.target.value)
     onChange({ ...filters, max_cost: v })
   }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Tag, Restaurant, RestaurantStatus, RestaurantRating } from '@/lib/types'
 import { RATING_ORDER } from '@/lib/types'
+import { getTagsByType } from '@/lib/utils'
 import TagInput from '@/components/tags/TagInput'
 
 interface Props {
@@ -13,33 +14,29 @@ interface Props {
   onSaved: () => void
 }
 
-const MAX_COST = 200
-
 export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: Props) {
   const [name, setName] = useState(restaurant?.name ?? '')
   const [address, setAddress] = useState(restaurant?.address ?? '')
   const [postalCode, setPostalCode] = useState(restaurant?.postal_code ?? '')
-  const [costRange, setCostRange] = useState<[number, number]>([
-    restaurant?.cost_min ?? 0,
-    restaurant?.cost_max ?? MAX_COST,
-  ])
+  const [costMin, setCostMin] = useState<number | null>(restaurant?.cost_min ?? null)
+  const [costMax, setCostMax] = useState<number | null>(restaurant?.cost_max ?? null)
   const [notes, setNotes] = useState(restaurant?.notes ?? '')
   const [signatureDishes, setSignatureDishes] = useState<string[]>(restaurant?.signature_dishes ?? [])
   const [cuisineTagIds, setCuisineTagIds] = useState<string[]>(
-    restaurant?.tags.filter((t) => t.type === 'cuisine').map((t) => t.id) ?? []
+    getTagsByType(restaurant?.tags ?? [], 'cuisine').map((t) => t.id)
   )
   const [dishTagIds, setDishTagIds] = useState<string[]>(
-    restaurant?.tags.filter((t) => t.type === 'dish').map((t) => t.id) ?? []
+    getTagsByType(restaurant?.tags ?? [], 'dish').map((t) => t.id)
   )
   const [tasteTagIds, setTasteTagIds] = useState<string[]>(
-    restaurant?.tags.filter((t) => t.type === 'taste').map((t) => t.id) ?? []
+    getTagsByType(restaurant?.tags ?? [], 'taste').map((t) => t.id)
   )
   const [sceneTagIds, setSceneTagIds] = useState<string[]>(
-    restaurant?.tags.filter((t) => t.type === 'scene').map((t) => t.id) ?? []
+    getTagsByType(restaurant?.tags ?? [], 'scene').map((t) => t.id)
   )
   const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
   const [rating, setRating] = useState<RestaurantRating>(restaurant?.rating ?? '未评分')
-  const [allTags, setAllTags] = useState<Tag[]>(restaurant?.tags ?? [])
+  const [allTags, setAllTags] = useState<Tag[]>([])
   const [saving, setSaving] = useState(false)
 
   const [chainSearchOpen, setChainSearchOpen] = useState(false)
@@ -65,13 +62,14 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     setName(r.name)
     setNotes(r.notes ?? '')
     setSignatureDishes(r.signature_dishes)
-    setCostRange([r.cost_min ?? 0, r.cost_max ?? MAX_COST])
+    setCostMin(r.cost_min ?? null)
+    setCostMax(r.cost_max ?? null)
     setStatus(r.status)
     setRating(r.rating)
-    setCuisineTagIds(r.tags.filter((t) => t.type === 'cuisine').map((t) => t.id))
-    setDishTagIds(r.tags.filter((t) => t.type === 'dish').map((t) => t.id))
-    setTasteTagIds(r.tags.filter((t) => t.type === 'taste').map((t) => t.id))
-    setSceneTagIds(r.tags.filter((t) => t.type === 'scene').map((t) => t.id))
+    setCuisineTagIds(getTagsByType(r.tags, 'cuisine').map((t) => t.id))
+    setDishTagIds(getTagsByType(r.tags, 'dish').map((t) => t.id))
+    setTasteTagIds(getTagsByType(r.tags, 'taste').map((t) => t.id))
+    setSceneTagIds(getTagsByType(r.tags, 'scene').map((t) => t.id))
     setChainSearchOpen(false)
     setChainQuery('')
   }
@@ -115,8 +113,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           postal_code: postalCode || null,
           lng: pinLng,
           lat: pinLat,
-          cost_min: costRange[0] === 0 ? null : costRange[0],
-          cost_max: costRange[1] === MAX_COST ? null : costRange[1],
+          cost_min: costMin,
+          cost_max: costMax,
           notes: notes || null,
           signature_dishes: signatureDishes,
           status,
@@ -347,11 +345,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>
                 <input
                   type="number"
-                  value={costRange[0] === 0 ? '' : costRange[0]}
-                  onChange={(e) => {
-                    const v = Math.max(0, Math.min(Number(e.target.value) || 0, costRange[1]))
-                    setCostRange([v, costRange[1]])
-                  }}
+                  value={costMin ?? ''}
+                  onChange={(e) => setCostMin(e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
                   placeholder="最少"
                   min={0}
                   style={{ width: 64, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '6px 8px', fontSize: 13, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}
@@ -362,11 +357,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 13, color: 'var(--fm-ink-3)' }}>$</span>
                 <input
                   type="number"
-                  value={costRange[1] === MAX_COST ? '' : costRange[1]}
-                  onChange={(e) => {
-                    const raw = e.target.value === '' ? MAX_COST : Number(e.target.value)
-                    setCostRange([costRange[0], raw])
-                  }}
+                  value={costMax ?? ''}
+                  onChange={(e) => setCostMax(e.target.value === '' ? null : Math.max(0, Number(e.target.value)))}
                   placeholder="不限"
                   min={0}
                   style={{ width: 64, border: '1px solid var(--fm-line-2)', borderRadius: 6, padding: '6px 8px', fontSize: 13, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink)', outline: 'none', textAlign: 'center', background: 'var(--fm-paper)' }}

@@ -1,23 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
 import { getPlanningArea } from '@/lib/onemap'
+import type { Restaurant, TagType } from '@/lib/types'
 
-function filterByTagType(results: any[], names: string[], type: string): any[] {
+interface DbTag {
+  id: string
+  name: string
+  type: TagType
+  parent_id: string | null
+  sort_order: number
+  created_at: string
+}
+
+interface DbRestaurantRow {
+  id: string
+  name: string
+  address: string | null
+  postal_code: string | null
+  planning_area: string | null
+  location: string | null
+  cost_min: number | null
+  cost_max: number | null
+  notes: string | null
+  signature_dishes: string[]
+  status: string
+  rating: string
+  created_at: string
+  updated_at: string
+  restaurant_tags: Array<{ tags: DbTag | null }>
+}
+
+function filterByTagType(results: Restaurant[], names: string[], type: string): Restaurant[] {
   if (names.length === 0) return results
-  return results.filter((r: any) =>
-    names.some((name) => r.tags.some((t: any) => t.name === name && t.type === type))
+  return results.filter((r) =>
+    names.some((name) => r.tags.some((t) => t.name === name && t.type === type))
   )
 }
+
+// EWKB binary layout constants
+const EWKB_LITTLE_ENDIAN = 1
+const EWKB_SRID_FLAG = 0x20000000
+const EWKB_BASE_OFFSET = 5   // 1 byte (byte order) + 4 bytes (type)
+const EWKB_SRID_OFFSET = 9   // EWKB_BASE_OFFSET + 4 bytes (SRID)
+const EWKB_DOUBLE_SIZE = 8
 
 function parseEWKBPoint(hex: string): [number, number] | null {
   try {
     const buf = Buffer.from(hex, 'hex')
-    const le = buf[0] === 1
+    const le = buf[0] === EWKB_LITTLE_ENDIAN
     const wkbType = le ? buf.readUInt32LE(1) : buf.readUInt32BE(1)
-    const hasSRID = (wkbType & 0x20000000) !== 0
-    const offset = hasSRID ? 9 : 5
+    const offset = (wkbType & EWKB_SRID_FLAG) !== 0 ? EWKB_SRID_OFFSET : EWKB_BASE_OFFSET
     const x = le ? buf.readDoubleLE(offset) : buf.readDoubleBE(offset)
-    const y = le ? buf.readDoubleLE(offset + 8) : buf.readDoubleBE(offset + 8)
+    const y = le ? buf.readDoubleLE(offset + EWKB_DOUBLE_SIZE) : buf.readDoubleBE(offset + EWKB_DOUBLE_SIZE)
     return [x, y]
   } catch {
     return null
@@ -47,7 +81,7 @@ export async function GET(request: NextRequest) {
       location,
       cost_min, cost_max, notes, signature_dishes, status, rating, created_at, updated_at,
       restaurant_tags (
-        tags ( id, name, type )
+        tags ( id, name, type, parent_id, sort_order, created_at )
       )
     `)
 
@@ -61,26 +95,38 @@ export async function GET(request: NextRequest) {
 
   // Filter by tag IDs (post-query since Supabase JS doesn't support junction filtering easily)
   // PostgREST returns geography columns as GeoJSON objects
-  let results = (data ?? []).map((r: any) => {
+  // data shape matches DbRestaurantRow — see interface above
+  let results: Restaurant[] = ((data ?? []) as any[]).map((r: DbRestaurantRow) => {
     const coords = typeof r.location === 'string' ? parseEWKBPoint(r.location) : null
     return {
-      ...r,
-      location_lng: coords?.[0] ?? null,
-      location_lat: coords?.[1] ?? null,
-      location: undefined,
-      planning_area: r.planning_area ?? null,
+      id: r.id,
+      name: r.name,
+      address: r.address,
+      postal_code: r.postal_code,
+      planning_area: r.planning_area,
+      location_lng: coords?.[0] ?? 0,
+      location_lat: coords?.[1] ?? 0,
+      cost_min: r.cost_min,
+      cost_max: r.cost_max,
+      notes: r.notes,
       signature_dishes: r.signature_dishes ?? [],
-      status: r.status ?? 'visited',
-      rating: r.rating ?? '未评分',
-      tags: r.restaurant_tags?.map((rt: any) => rt.tags).filter(Boolean) ?? [],
-      restaurant_tags: undefined,
-    }
+      status: (r.status ?? 'visited') as Restaurant['status'],
+      rating: (r.rating ?? '未评分') as Restaurant['rating'],
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      tags: (r.restaurant_tags ?? []).map((rt) => rt.tags).filter((t): t is DbTag => Boolean(t)),
+    } satisfies Restaurant
   })
 
-  results = filterByTagType(results, cuisineTags, 'cuisine')
-  results = filterByTagType(results, dishTags, 'dish')
-  results = filterByTagType(results, tasteTags, 'taste')
-  results = filterByTagType(results, sceneTags, 'scene')
+  const tagFilters: [string[], string][] = [
+    [cuisineTags, 'cuisine'],
+    [dishTags, 'dish'],
+    [tasteTags, 'taste'],
+    [sceneTags, 'scene'],
+  ]
+  for (const [names, type] of tagFilters) {
+    results = filterByTagType(results, names, type)
+  }
 
   if (ratingsFilter.length > 0) {
     results = results.filter((r: any) => ratingsFilter.includes(r.rating))

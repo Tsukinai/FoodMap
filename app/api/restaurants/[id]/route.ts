@@ -30,33 +30,38 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { error } = await supabase.from('restaurants').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Replace tags if provided — backup current rows so we can restore on insert failure
+  // Replace tags if any tag array is provided — diff current vs desired to avoid full delete/re-insert
   if (cuisine_tag_ids !== undefined || dish_tag_ids !== undefined || taste_tag_ids !== undefined || scene_tag_ids !== undefined) {
-    const { data: backup } = await supabase
-      .from('restaurant_tags')
-      .select('tag_id')
-      .eq('restaurant_id', id)
-
-    await supabase.from('restaurant_tags').delete().eq('restaurant_id', id)
-
-    const tagIds = [
+    const newTagIds = new Set<string>([
       ...(cuisine_tag_ids ?? []),
       ...(dish_tag_ids ?? []),
       ...(taste_tag_ids ?? []),
       ...(scene_tag_ids ?? []),
-    ]
-    if (tagIds.length > 0) {
-      const { error: insertError } = await supabase.from('restaurant_tags').insert(
-        tagIds.map((tag_id: string) => ({ restaurant_id: id, tag_id }))
-      )
-      if (insertError) {
-        if (backup?.length) {
-          await supabase.from('restaurant_tags').insert(
-            backup.map(t => ({ restaurant_id: id, tag_id: t.tag_id }))
-          )
-        }
-        return NextResponse.json({ error: insertError.message }, { status: 500 })
-      }
+    ])
+
+    const { data: current } = await supabase
+      .from('restaurant_tags')
+      .select('tag_id')
+      .eq('restaurant_id', id)
+
+    const currentIds = new Set((current ?? []).map((r: { tag_id: string }) => r.tag_id))
+    const toRemove = [...currentIds].filter((tid) => !newTagIds.has(tid))
+    const toAdd = [...newTagIds].filter((tid) => !currentIds.has(tid))
+
+    if (toRemove.length > 0) {
+      const { error: delError } = await supabase
+        .from('restaurant_tags')
+        .delete()
+        .eq('restaurant_id', id)
+        .in('tag_id', toRemove)
+      if (delError) return NextResponse.json({ error: delError.message }, { status: 500 })
+    }
+
+    if (toAdd.length > 0) {
+      const { error: insError } = await supabase
+        .from('restaurant_tags')
+        .insert(toAdd.map((tag_id) => ({ restaurant_id: id, tag_id })))
+      if (insError) return NextResponse.json({ error: insError.message }, { status: 500 })
     }
   }
 
