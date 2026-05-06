@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect, useMemo } from 'react'
-import Map, { NavigationControl, type MapRef } from 'react-map-gl/maplibre'
+import Map, { NavigationControl, Marker, type MapRef } from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { SINGAPORE_CENTER, SINGAPORE_ZOOM, SINGAPORE_BOUNDS } from '@/lib/constants'
 import type { Restaurant, FilterPayload } from '@/lib/types'
@@ -88,6 +88,8 @@ export default function MapContainer({
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null)
   const [editRestaurant, setEditRestaurant] = useState<Restaurant | null>(null)
   const [spiderfiedKey, setSpiderfiedKey] = useState<string | null>(null)
+  const [userLocation, setUserLocation] = useState<{ lng: number; lat: number } | null>(null)
+  const [locating, setLocating] = useState(false)
 
   useEffect(() => {
     if (addingPin) {
@@ -113,6 +115,21 @@ export default function MapContainer({
     setSelectedRestaurant(null)
   }
 
+  function handleLocate() {
+    if (!navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { longitude: lng, latitude: lat } = pos.coords
+        setUserLocation({ lng, lat })
+        setLocating(false)
+        mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 1200 })
+      },
+      () => setLocating(false),
+      { timeout: 10000 }
+    )
+  }
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -128,6 +145,37 @@ export default function MapContainer({
         onClick={handleMapClick}
       >
         <NavigationControl position="bottom-right" />
+
+        {userLocation && (
+          <Marker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
+            <div style={{ position: 'relative', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Pulsing outer ring */}
+              <div style={{
+                position: 'absolute',
+                width: 44, height: 44,
+                borderRadius: '50%',
+                background: 'rgba(59,130,246,0.18)',
+                animation: 'ping 2s cubic-bezier(0,0,0.2,1) infinite',
+              }} />
+              {/* Soft halo */}
+              <div style={{
+                position: 'absolute',
+                width: 26, height: 26,
+                borderRadius: '50%',
+                background: 'rgba(59,130,246,0.22)',
+              }} />
+              {/* Core dot */}
+              <div style={{
+                position: 'relative',
+                width: 14, height: 14,
+                borderRadius: '50%',
+                background: '#3b82f6',
+                border: '2.5px solid #fff',
+                boxShadow: '0 2px 8px rgba(59,130,246,0.55)',
+              }} />
+            </div>
+          </Marker>
+        )}
 
         {restaurants.map((r) => {
           const { groupSize, groupKey, pixelOffset } = groupInfo[r.id]
@@ -152,6 +200,50 @@ export default function MapContainer({
         })}
 
       </Map>
+
+      {/* Locate button */}
+      <div style={{ position: 'absolute', bottom: 32, left: 8, zIndex: 10 }}>
+        <button
+          onClick={handleLocate}
+          disabled={locating}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            border: '1px solid rgba(0,0,0,0.15)',
+            background: locating ? 'var(--fm-cream)' : 'var(--fm-paper)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+            cursor: locating ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: userLocation ? '#3b82f6' : 'var(--fm-ink-2)',
+            transition: 'color 0.2s, background 0.15s',
+            position: 'relative',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v4M12 19v4M1 12h4M19 12h4" />
+          </svg>
+          {/* Tooltip */}
+          <span className="locate-tooltip" style={{
+            position: 'absolute',
+            left: '110%',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'rgba(30,30,30,0.82)',
+            color: '#fff',
+            fontSize: 11,
+            padding: '3px 7px',
+            borderRadius: 4,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+          }}>
+            定位到我的位置
+          </span>
+        </button>
+      </div>
 
       {/* Attribution */}
       <div

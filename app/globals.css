@@ -2,6 +2,13 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@keyframes ping {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+.locate-tooltip { opacity: 0; transition: opacity 0.15s; }
+button:hover .locate-tooltip { opacity: 1; }
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
