@@ -28,6 +28,7 @@ export interface Restaurant {
   signature_dishes: string[]
   status: RestaurantStatus
   rating: RestaurantRating
+  planning_area: string | null
   created_at: string
   updated_at: string
   tags: Tag[]
@@ -60,6 +61,7 @@ export interface FilterPayload {
   min_cost: number | null
   status: RestaurantStatus[]
   ratings: RestaurantRating[]
+  areas: string[]
 }
 
 export interface OneMapResult {

@@ -31,6 +31,7 @@ const DEFAULT_FILTERS: FilterPayload = {
   min_cost: null,
   status: [],
   ratings: [],
+  areas: [],
 }
 
 export default function HomePage() {
@@ -111,10 +112,22 @@ export default function HomePage() {
   }, [])
 
   const displayedRestaurants = useMemo(() => {
-    if (!searchQuery.trim()) return allRestaurants
-    const q = searchQuery.trim().toLowerCase()
-    return allRestaurants.filter(r => r.name.toLowerCase().includes(q))
-  }, [allRestaurants, searchQuery])
+    let results = allRestaurants
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      results = results.filter(r => r.name.toLowerCase().includes(q))
+    }
+    if (filters.areas.length > 0) {
+      results = results.filter(r => r.planning_area !== null && filters.areas.includes(r.planning_area))
+    }
+    return results
+  }, [allRestaurants, searchQuery, filters.areas])
+
+  const availableAreas = useMemo(() => {
+    const seen = new Set<string>()
+    allRestaurants.forEach(r => { if (r.planning_area) seen.add(r.planning_area) })
+    return Array.from(seen).sort()
+  }, [allRestaurants])
 
   useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
@@ -161,6 +174,7 @@ export default function HomePage() {
           onViewModeChange={setViewMode}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          availableAreas={availableAreas}
         />
       </div>
 
