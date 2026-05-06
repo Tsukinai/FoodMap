@@ -150,28 +150,56 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
       >
         {/* Header */}
         <div className="fm-modal-header" style={{ padding: '28px 36px 0' }}>
-          <div
-            style={{
-              fontFamily: 'var(--font-geist-mono)',
-              fontSize: 10,
-              color: 'var(--fm-ink-4)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontWeight: 500,
-              marginBottom: 6,
-            }}
-          >
-            {restaurant ? '编辑地图钉' : '新建地图钉'}
-          </div>
-          <div
-            style={{
-              fontFamily: 'var(--font-instrument-serif)',
-              fontSize: 32,
-              lineHeight: 1,
-              marginBottom: 20,
-            }}
-          >
-            {restaurant ? restaurant.name : '打一个新地图钉'}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-geist-mono)',
+                  fontSize: 10,
+                  color: 'var(--fm-ink-4)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  fontWeight: 500,
+                  marginBottom: 6,
+                }}
+              >
+                {restaurant ? '编辑地图钉' : '新建地图钉'}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-instrument-serif)',
+                  fontSize: 32,
+                  lineHeight: 1,
+                  marginBottom: 20,
+                }}
+              >
+                {restaurant ? restaurant.name : '打一个新地图钉'}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                flexShrink: 0,
+                marginLeft: 12,
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                border: '1px solid var(--fm-line-2)',
+                background: 'transparent',
+                color: 'var(--fm-ink-3)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+                lineHeight: 1,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--fm-muted)'; e.currentTarget.style.color = 'var(--fm-ink)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--fm-ink-3)' }}
+              aria-label="关闭"
+            >
+              ✕
+            </button>
           </div>
         </div>
 
