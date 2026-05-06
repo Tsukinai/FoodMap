@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Restaurant } from '@/lib/types'
 import { CUISINE_STYLES } from '@/lib/constants'
+import { formatCostRange } from '@/lib/utils'
 import { getRatingStyle } from '@/components/map/AddPinModal'
 import AddPinModal from '@/components/map/AddPinModal'
 
@@ -102,7 +103,7 @@ export default function RestaurantList({ restaurants, loading, isOwner, onSaved 
     <div
       style={{
         flexShrink: 0,
-        padding: '10px 16px 10px 62px',
+        padding: '10px 16px',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
@@ -277,14 +278,8 @@ function RestaurantCard({
   const otherTags = r.tags.filter((t) => t.type !== 'cuisine')
   const displayTags = [...cuisineTags, ...otherTags].slice(0, 4)
 
-  const priceLabel =
-    r.cost_min !== null && r.cost_max !== null
-      ? `S$${r.cost_min}–${r.cost_max} / 人`
-      : r.cost_min !== null
-        ? `S$${r.cost_min}+ / 人`
-        : r.cost_max !== null
-          ? `≤ S$${r.cost_max} / 人`
-          : null
+  const costBase = formatCostRange(r.cost_min, r.cost_max)
+  const priceLabel = costBase ? `${costBase} / 人` : null
 
   return (
     <div
