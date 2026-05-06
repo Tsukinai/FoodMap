@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
+import { getPlanningArea } from '@/lib/onemap'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireOwner()
@@ -15,7 +16,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (name !== undefined) updates.name = name
   if (address !== undefined) updates.address = address
   if (postal_code !== undefined) updates.postal_code = postal_code
-  if (lng !== undefined && lat !== undefined) updates.location = `POINT(${lng} ${lat})`
+  if (lng !== undefined && lat !== undefined) {
+    updates.location = `POINT(${lng} ${lat})`
+    updates.planning_area = await getPlanningArea(lat, lng) ?? null
+  }
   if (cost_min !== undefined) updates.cost_min = cost_min
   if (cost_max !== undefined) updates.cost_max = cost_max
   if (notes !== undefined) updates.notes = notes

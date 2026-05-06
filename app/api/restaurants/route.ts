@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
+import { getPlanningArea } from '@/lib/onemap'
 
 function filterByTagType(results: any[], names: string[], type: string): any[] {
   if (names.length === 0) return results
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('restaurants')
     .select(`
-      id, name, address, postal_code,
+      id, name, address, postal_code, planning_area,
       location,
       cost_min, cost_max, notes, signature_dishes, status, rating, created_at, updated_at,
       restaurant_tags (
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
       location_lng: coords?.[0] ?? null,
       location_lat: coords?.[1] ?? null,
       location: undefined,
+      planning_area: r.planning_area ?? null,
       signature_dishes: r.signature_dishes ?? [],
       status: r.status ?? 'visited',
       rating: r.rating ?? '未评分',
@@ -99,6 +101,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient()
+  const planning_area = await getPlanningArea(lat, lng)
 
   const { data: restaurant, error } = await supabase
     .from('restaurants')
@@ -113,6 +116,7 @@ export async function POST(request: NextRequest) {
       signature_dishes: signature_dishes ?? [],
       status: status ?? 'visited',
       rating: rating ?? '未评分',
+      planning_area: planning_area ?? null,
     })
     .select('id')
     .single()
