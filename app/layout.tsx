@@ -28,6 +28,7 @@ export const metadata: Metadata = {
     title: '食迹',
   },
   icons: {
+    icon: '/icons/icon-192.png',
     apple: '/icons/icon-192.png',
   },
 };
