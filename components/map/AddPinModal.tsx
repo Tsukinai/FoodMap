@@ -34,7 +34,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [sceneTagIds, setSceneTagIds] = useState<string[]>(
     getTagsByType(restaurant?.tags ?? [], 'scene').map((t) => t.id)
   )
-  const [status, setStatus] = useState<RestaurantStatus>(restaurant?.status ?? 'visited')
+  const [status, setStatus] = useState<RestaurantStatus | null>(restaurant?.status ?? null)
   const [rating, setRating] = useState<RestaurantRating>(restaurant?.rating ?? '未评分')
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [saving, setSaving] = useState(false)
@@ -100,7 +100,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   }
 
   async function handleSave() {
-    if (!name.trim()) return
+    if (!name.trim() || !status) return
     setSaving(true)
     try {
       const url = restaurant ? `/api/restaurants/${restaurant.id}` : '/api/restaurants'
@@ -117,7 +117,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           cost_max: costMax,
           notes: notes || null,
           signature_dishes: signatureDishes,
-          status,
+          status: status!,
           rating,
           cuisine_tag_ids: cuisineTagIds,
           dish_tag_ids: dishTagIds,
@@ -534,17 +534,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !name.trim() || !address.trim()}
+              disabled={saving || !name.trim() || !address.trim() || !status}
               style={{
                 padding: '10px 18px',
                 borderRadius: 8,
                 fontSize: 13.5,
                 fontWeight: 500,
                 border: '1px solid var(--fm-orange)',
-                background: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
-                borderColor: saving || !name.trim() || !address.trim() ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                background: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                borderColor: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
                 color: '#fff',
-                cursor: saving || !name.trim() || !address.trim() ? 'default' : 'pointer',
+                cursor: saving || !name.trim() || !address.trim() || !status ? 'default' : 'pointer',
                 fontFamily: 'var(--font-geist-sans)',
                 boxShadow: '0 4px 10px rgba(217,107,44,0.25)',
               }}
