@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Tag, Restaurant, RestaurantStatus, RestaurantRating } from '@/lib/types'
 import { RATING_ORDER } from '@/lib/types'
 import { getTagsByType } from '@/lib/utils'
@@ -74,29 +74,36 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     setChainQuery('')
   }
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [geoResults, setGeoResults] = useState<{ address: string; postal_code: string; lng: number; lat: number }[]>([])
   const [pinLng, setPinLng] = useState(restaurant?.location_lng ?? lng ?? 0)
   const [pinLat, setPinLat] = useState(restaurant?.location_lat ?? lat ?? 0)
+
+  type PlaceResult = { name: string; address: string; postal_code: string; lat: number; lng: number }
+  const [placesResults, setPlacesResults] = useState<PlaceResult[]>([])
+  const skipPlacesRef = useRef(false)
 
   useEffect(() => {
     fetch('/api/tags').then((r) => r.json()).then(setAllTags)
   }, [])
 
-  async function handleGeoSearch() {
-    if (!searchQuery.trim()) return
-    const res = await fetch(`/api/geocode?q=${encodeURIComponent(searchQuery)}`)
-    const results = await res.json()
-    setGeoResults(results)
-  }
+  useEffect(() => {
+    if (skipPlacesRef.current) { skipPlacesRef.current = false; return }
+    if (name.trim().length < 2) { setPlacesResults([]); return }
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/places?q=${encodeURIComponent(name.trim())}`)
+      const data = await res.json()
+      setPlacesResults(Array.isArray(data) ? data : [])
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [name])
 
-  function selectGeoResult(r: typeof geoResults[0]) {
-    setAddress(r.address)
-    setPostalCode(r.postal_code)
-    setPinLng(r.lng)
-    setPinLat(r.lat)
-    setGeoResults([])
-    setSearchQuery(r.address)
+  function selectPlace(p: PlaceResult) {
+    skipPlacesRef.current = true
+    setName(p.name)
+    setAddress(p.address)
+    setPostalCode(p.postal_code)
+    setPinLng(p.lng)
+    setPinLat(p.lat)
+    setPlacesResults([])
   }
 
   async function handleSave() {
@@ -207,12 +214,54 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
         <div className="fm-modal-body flex-1 overflow-y-auto" style={{ padding: '0 36px 28px' }}>
           {/* Name + Address row */}
           <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: chainSearchOpen ? 6 : 14 }}>
-            <div>
+            <div className="relative">
               <FmInput
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="餐馆名称 *"
+                placeholder="餐馆名称，输入搜索地点 *"
               />
+              {placesResults.length > 0 && (
+                <div
+                  className="absolute top-full left-0 right-0 z-10 rounded-lg overflow-hidden"
+                  style={{
+                    border: '1px solid var(--fm-line-2)',
+                    background: 'var(--fm-paper)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                    marginTop: 4,
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 6px 0' }}>
+                    <button
+                      onClick={() => setPlacesResults([])}
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--fm-ink-4)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        lineHeight: 1,
+                      }}
+                      aria-label="关闭搜索结果"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {placesResults.map((p, i) => (
+                    <button
+                      key={i}
+                      className="fm-dropdown-item w-full text-left px-3 py-2.5"
+                      style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
+                      onClick={() => selectPlace(p)}
+                    >
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fm-ink-4)', marginTop: 1 }}>{p.address}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {!restaurant && !chainSearchOpen && (
                 <button
                   onClick={openChainSearch}
@@ -232,37 +281,12 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 </button>
               )}
             </div>
-            <div className="relative">
+            <div>
               <FmInput
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleGeoSearch()}
-                placeholder="邮编 / 地址搜索 *"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="地址（搜索后自动填入）"
               />
-              {geoResults.length > 0 && (
-                <div
-                  className="absolute top-full left-0 right-0 z-10 rounded-lg overflow-hidden"
-                  style={{
-                    border: '1px solid var(--fm-line-2)',
-                    background: 'var(--fm-paper)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                    marginTop: 4,
-                    maxHeight: 160,
-                    overflowY: 'auto',
-                  }}
-                >
-                  {geoResults.map((r, i) => (
-                    <button
-                      key={i}
-                      className="fm-dropdown-item w-full text-left px-3 py-2.5 text-base"
-                      style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
-                      onClick={() => selectGeoResult(r)}
-                    >
-                      {r.address}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
