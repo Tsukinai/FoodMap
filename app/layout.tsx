@@ -22,6 +22,14 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "食迹 — 新加坡美食地图",
   description: "记录新加坡美食的个人地图",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '食迹',
+  },
+  icons: {
+    apple: '/icons/icon-192.png',
+  },
 };
 
 export default function RootLayout({
