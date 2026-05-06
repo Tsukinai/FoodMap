@@ -60,6 +60,7 @@ export interface FilterPayload {
   min_cost: number | null
   status: RestaurantStatus[]
   ratings: RestaurantRating[]
+  areas: string[]
 }
 
 export interface OneMapResult {

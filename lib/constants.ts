@@ -6,6 +6,89 @@ export const SINGAPORE_BOUNDS: [[number, number], [number, number]] = [
 ]
 
 
+export const POSTAL_SECTOR_TO_REGION: Record<string, string> = {
+  // D01: Raffles Place, Cecil, Marina, People's Park
+  '01': 'Chinatown/CBD', '02': 'Chinatown/CBD', '03': 'Chinatown/CBD',
+  '04': 'Chinatown/CBD', '05': 'Chinatown/CBD', '06': 'Chinatown/CBD',
+  // D02: Anson, Tanjong Pagar
+  '07': 'Tanjong Pagar', '08': 'Tanjong Pagar',
+  // D04: Telok Blangah, Harbourfront
+  '09': 'Harbourfront', '10': 'Harbourfront',
+  // D05: Pasir Panjang, West Coast, Clementi New Town
+  '11': 'Clementi', '12': 'Clementi', '13': 'Clementi',
+  // D03: Queenstown, Tiong Bahru, Redhill
+  '14': 'Queenstown', '15': 'Queenstown', '16': 'Queenstown',
+  // D06: High Street, Clarke Quay
+  '17': 'Clarke Quay', '18': 'Bugis',
+  // D07: Beach Road, Bugis, Golden Mile
+  '19': 'Bugis', '20': 'Little India',
+  // D08: Little India, Farrer Park, Serangoon Road
+  '21': 'Little India', '22': 'Orchard', '23': 'Orchard',
+  // D09: Orchard, Cairnhill, River Valley
+  '24': 'Orchard', '25': 'Orchard', '26': 'Orchard', '27': 'Bukit Timah/Holland',
+  // D10: Ardmore, Bukit Timah, Holland Road, Tanglin
+  '28': 'Bukit Timah/Holland', '29': 'Bukit Timah/Holland', '30': 'Bukit Timah/Holland',
+  // D11: Watten Estate, Novena, Thomson
+  '31': 'Novena/Thomson', '32': 'Novena/Thomson', '33': 'Novena/Thomson',
+  // D12: Balestier, Toa Payoh, Serangoon
+  '34': 'Toa Payoh', '35': 'Toa Payoh', '36': 'Toa Payoh', '37': 'Toa Payoh',
+  // D13: Macpherson, Braddell
+  '38': 'Macpherson', '39': 'Macpherson', '40': 'Macpherson', '41': 'Macpherson',
+  // D14: Geylang, Eunos
+  '42': 'Geylang', '43': 'Geylang', '44': 'Geylang', '45': 'Geylang',
+  // D15: Katong, Joo Chiat, Amber Road
+  '46': 'East Coast', '47': 'East Coast', '48': 'East Coast', '49': 'East Coast', '50': 'East Coast',
+  // D16: Bedok, Upper East Coast
+  '51': 'Bedok', '52': 'Bedok', '53': 'Bedok', '54': 'Bedok', '55': 'Bedok',
+  // D17: Loyang, Changi
+  '56': 'Changi', '57': 'Changi',
+  // D18: Tampines, Pasir Ris
+  '58': 'Tampines/Pasir Ris', '59': 'Tampines/Pasir Ris',
+  // D19: Jurong East, Jurong West, Boon Lay
+  '60': 'Jurong/Boon Lay', '61': 'Jurong/Boon Lay', '62': 'Jurong/Boon Lay',
+  '63': 'Jurong/Boon Lay', '64': 'Jurong/Boon Lay',
+  // D20: Bishan, Ang Mo Kio
+  '65': 'Ang Mo Kio', '66': 'Ang Mo Kio', '67': 'Ang Mo Kio', '68': 'Ang Mo Kio',
+  // D21: Upper Bukit Timah, Clementi Park, Ulu Pandan
+  '69': 'Clementi', '70': 'Clementi', '71': 'Clementi',
+  // D22: Jurong, Boon Lay
+  '72': 'Jurong/Boon Lay', '73': 'Jurong/Boon Lay',
+  // D23: Hillview, Dairy Farm, Bukit Panjang, Choa Chu Kang
+  '75': 'Choa Chu Kang', '76': 'Choa Chu Kang',
+  // D24: Lim Chu Kang, Tengah
+  '77': 'Lim Chu Kang', '78': 'Lim Chu Kang',
+  // D25: Kranji, Woodlands
+  '79': 'Woodlands', '80': 'Woodlands',
+  // D26: Upper Thomson, Springleaf
+  '81': 'Upper Thomson', '82': 'Upper Thomson',
+  // D27: Yishun, Sembawang
+  '83': 'Yishun/Sembawang', '84': 'Yishun/Sembawang',
+  '85': 'Yishun/Sembawang', '86': 'Yishun/Sembawang',
+  // D28: Seletar, Punggol, Sengkang
+  '87': 'Seletar/Punggol', '88': 'Seletar/Punggol', '89': 'Seletar/Punggol',
+  '90': 'Seletar/Punggol', '91': 'Seletar/Punggol',
+}
+
+export const REGION_ORDER = [
+  // Central
+  'Chinatown/CBD', 'Tanjong Pagar', 'Harbourfront', 'Queenstown',
+  'Clarke Quay', 'Bugis', 'Little India', 'Orchard',
+  'Bukit Timah/Holland', 'Novena/Thomson', 'Toa Payoh', 'Macpherson',
+  // East
+  'Geylang', 'East Coast', 'Bedok', 'Changi', 'Tampines/Pasir Ris',
+  // North-East
+  'Hougang/Punggol', 'Ang Mo Kio', 'Upper Thomson',
+  // West
+  'Pasir Panjang', 'Clementi', 'Jurong/Boon Lay', 'Choa Chu Kang',
+  // North
+  'Lim Chu Kang', 'Woodlands', 'Yishun/Sembawang', 'Seletar/Punggol',
+] as const
+
+export function postalCodeToRegion(postalCode: string | null | undefined): string | null {
+  if (!postalCode) return null
+  return POSTAL_SECTOR_TO_REGION[postalCode.trim().slice(0, 2)] ?? null
+}
+
 export const CUISINE_STYLES: Record<string, { color: string; bg: string }> = {
   // Singapore-specific cuisines
   '海南': { color: '#b8820a', bg: '#fdf5e0' },

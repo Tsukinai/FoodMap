@@ -21,6 +21,7 @@ interface Props {
   onViewModeChange?: (mode: 'map' | 'list' | 'guestbook') => void
   searchQuery?: string
   onSearchChange?: (q: string) => void
+  availableAreas?: string[]
 }
 
 const MAX_COST = 300
@@ -37,6 +38,7 @@ export default function FilterPanel({
   onViewModeChange,
   searchQuery = '',
   onSearchChange,
+  availableAreas = [],
 }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
 
@@ -103,6 +105,7 @@ export default function FilterPanel({
       min_cost:     null,
       status:       [],
       ratings:      [],
+      areas:        [],
     })
   }
 
@@ -114,7 +117,8 @@ export default function FilterPanel({
     filters.max_cost !== null ||
     filters.min_cost !== null ||
     (filters.status?.length ?? 0) > 0 ||
-    (filters.ratings?.length ?? 0) > 0
+    (filters.ratings?.length ?? 0) > 0 ||
+    (filters.areas?.length ?? 0) > 0
 
   // ── Shared input style ───────────────────────────────────────────────────
   const costInputStyle: React.CSSProperties = {
@@ -267,6 +271,28 @@ export default function FilterPanel({
             </button>
           )}
         </div>
+
+        {/* ── 区域 ── */}
+        {availableAreas.length > 0 && (
+          <section>
+            <FilterLabel count={filters.areas?.length ?? 0}>区域</FilterLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {availableAreas.map((region) => {
+                const active = (filters.areas ?? []).includes(region)
+                return (
+                  <button
+                    key={region}
+                    onClick={() => toggleArr('areas', region)}
+                    className={`fm-chip${active ? ' active' : ''}`}
+                    style={{ fontSize: 12 }}
+                  >
+                    {region}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── Status ── */}
         <section>

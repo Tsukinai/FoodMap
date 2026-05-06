@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
+import { postalCodeToRegion, REGION_ORDER } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import FilterPanel from '@/components/sidebar/FilterPanel'
@@ -31,6 +32,7 @@ const DEFAULT_FILTERS: FilterPayload = {
   min_cost: null,
   status: [],
   ratings: [],
+  areas: [],
 }
 
 export default function HomePage() {
@@ -111,10 +113,28 @@ export default function HomePage() {
   }, [])
 
   const displayedRestaurants = useMemo(() => {
-    if (!searchQuery.trim()) return allRestaurants
-    const q = searchQuery.trim().toLowerCase()
-    return allRestaurants.filter(r => r.name.toLowerCase().includes(q))
-  }, [allRestaurants, searchQuery])
+    let results = allRestaurants
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      results = results.filter(r => r.name.toLowerCase().includes(q))
+    }
+    if (filters.areas.length > 0) {
+      results = results.filter(r => {
+        const region = postalCodeToRegion(r.postal_code)
+        return region !== null && filters.areas.includes(region)
+      })
+    }
+    return results
+  }, [allRestaurants, searchQuery, filters.areas])
+
+  const availableAreas = useMemo(() => {
+    const set = new Set<string>()
+    allRestaurants.forEach(r => {
+      const region = postalCodeToRegion(r.postal_code)
+      if (region) set.add(region)
+    })
+    return REGION_ORDER.filter(r => set.has(r))
+  }, [allRestaurants])
 
   useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
@@ -161,6 +181,7 @@ export default function HomePage() {
           onViewModeChange={setViewMode}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          availableAreas={availableAreas}
         />
       </div>
 
