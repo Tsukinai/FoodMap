@@ -144,10 +144,23 @@ export const CUISINE_STYLES: Record<string, { color: string; bg: string }> = {
   '云南菜':  { color: '#7a4e20', bg: '#f5ede0' },
   '湘菜':    { color: '#8b1c1c', bg: '#f9e5e5' },
   '新疆菜':  { color: '#8c6620', bg: '#f7f0e0' },
+  '东北菜':  { color: '#7a4020', bg: '#f5ece4' },
+  '闽菜':    { color: '#1a6b5a', bg: '#e3f2ed' },
+  // Southeast Asian sub-cuisines
+  '南洋菜':  { color: '#2e7d4f', bg: '#e8f5ec' },
+  '越南菜':  { color: '#d35400', bg: '#fdf0e6' },
+  // Western sub-cuisines
+  '意大利菜': { color: '#a82828', bg: '#faeaea' },
+  '法餐':    { color: '#4a3a6b', bg: '#e8e0f2' },
+  '瑞典菜':  { color: '#1a5c9a', bg: '#e3eef8' },
+  '西班牙菜': { color: '#c2410c', bg: '#fdeee6' },
+  // Standalone top-level
+  '小吃':    { color: '#c07020', bg: '#fdf3e0' },
+  '酒吧':    { color: '#5b3a8a', bg: '#ede8f5' },
+  '饮品':    { color: '#2271b3', bg: '#e8f4fd' },
   // Legacy names
   '印度菜':  { color: '#e67e22', bg: '#fef5e7' },
   '马来菜':  { color: '#27ae60', bg: '#eafaf1' },
-  '越南菜':  { color: '#d35400', bg: '#fdf0e6' },
   '本地菜':  { color: '#f4a261', bg: '#fff8f0' },
 }
 
