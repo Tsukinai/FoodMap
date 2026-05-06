@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { Tag, FilterPayload, RestaurantStatus, RestaurantRating } from '@/lib/types'
 import { RATING_ORDER } from '@/lib/types'
 import { getRatingStyle } from '@/components/map/AddPinModal'
-import { CUISINE_STYLES } from '@/lib/constants'
+import { CUISINE_STYLES, SINGAPORE_REGION_GROUPS } from '@/lib/constants'
 import type { User } from '@supabase/supabase-js'
 import { signIn, signOut } from '@/lib/auth'
 
@@ -41,6 +41,7 @@ export default function FilterPanel({
   availableAreas = [],
 }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
+  const [areaExpanded, setAreaExpanded] = useState(false)
 
   function toggleExpand(id: string) {
     setExpandedParents(prev => {
@@ -275,22 +276,100 @@ export default function FilterPanel({
         {/* ── 区域 ── */}
         {availableAreas.length > 0 && (
           <section>
-            <FilterLabel count={filters.areas?.length ?? 0}>区域</FilterLabel>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {availableAreas.map((region) => {
-                const active = (filters.areas ?? []).includes(region)
-                return (
-                  <button
-                    key={region}
-                    onClick={() => toggleArr('areas', region)}
-                    className={`fm-chip${active ? ' active' : ''}`}
-                    style={{ fontSize: 12 }}
-                  >
-                    {region}
-                  </button>
-                )
-              })}
-            </div>
+            <button
+              onClick={() => setAreaExpanded(v => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                marginBottom: areaExpanded ? 8 : 0,
+                gap: 6,
+                fontFamily: 'var(--font-geist-mono)',
+                fontSize: 10,
+                fontWeight: 500,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--fm-ink-4)',
+              }}
+            >
+              <span style={{ flex: 1, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+                区域
+                {(filters.areas?.length ?? 0) > 0 && (
+                  <span className="fm-filter-label-count">{filters.areas?.length}</span>
+                )}
+              </span>
+              <svg
+                width="10" height="10" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ transform: areaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}
+              >
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+            {areaExpanded && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {SINGAPORE_REGION_GROUPS.map(({ label, areas }) => {
+                  const regionAreas = areas.filter(a => availableAreas.includes(a))
+                  if (regionAreas.length === 0) return null
+                  const selected = filters.areas ?? []
+                  const allSel = regionAreas.every(a => selected.includes(a))
+                  const someSel = !allSel && regionAreas.some(a => selected.includes(a))
+                  return (
+                    <div key={label}>
+                      <button
+                        onClick={() => {
+                          const cur = filters.areas ?? []
+                          const next = allSel
+                            ? cur.filter(a => !regionAreas.includes(a))
+                            : [...new Set([...cur, ...regionAreas])]
+                          onChange({ ...filters, areas: next })
+                        }}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          fontFamily: 'var(--font-geist-mono)',
+                          letterSpacing: '0.05em',
+                          marginBottom: 5,
+                          background: allSel ? 'var(--fm-ink)' : someSel ? 'var(--fm-cream)' : 'var(--fm-muted)',
+                          color: allSel ? 'var(--fm-paper)' : 'var(--fm-ink-2)',
+                          border: allSel
+                            ? '1.5px solid var(--fm-ink)'
+                            : someSel
+                            ? '1.5px solid var(--fm-ink-3)'
+                            : '1.5px solid var(--fm-line-2)',
+                          cursor: 'pointer',
+                          transition: 'all 0.12s',
+                          display: 'block',
+                        }}
+                      >
+                        {label}
+                      </button>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingLeft: 4 }}>
+                        {regionAreas.map(area => {
+                          const active = selected.includes(area)
+                          return (
+                            <button
+                              key={area}
+                              onClick={() => toggleArr('areas', area)}
+                              className={`fm-chip${active ? ' active' : ''}`}
+                              style={{ fontSize: 11 }}
+                            >
+                              {area}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </section>
         )}
 
