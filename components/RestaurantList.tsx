@@ -73,6 +73,9 @@ function getCuisineEmoji(cuisine?: string): string {
     '日料': '🍱', '泰餐': '🥭', '西餐': '🍽️', '甜品': '🍰', '川菜': '🌶️',
     '云南菜': '🍄', '湘菜': '🌶️', '新疆菜': '🐑', '印度菜': '🍛', '马来菜': '🍜',
     '越南菜': '🍜', '本地菜': '🇸🇬',
+    '东北菜': '🥟', '闽菜': '🦪', '南洋菜': '🍜',
+    '意大利菜': '🍝', '法餐': '🥐', '瑞典菜': '🫙', '西班牙菜': '🥘',
+    '小吃': '🍢', '酒吧': '🍺', '饮品': '🧋',
   }
   return map[cuisine ?? ''] ?? '🍴'
 }
@@ -274,9 +277,7 @@ function RestaurantCard({
   isOwner?: boolean
   onClick?: () => void
 }) {
-  const cuisineTags = r.tags.filter((t) => t.type === 'cuisine')
-  const otherTags = r.tags.filter((t) => t.type !== 'cuisine')
-  const displayTags = [...cuisineTags, ...otherTags].slice(0, 4)
+  const displayTags = r.tags.filter((t) => t.type === 'taste' || t.type === 'scene')
 
   const costBase = formatCostRange(r.cost_min, r.cost_max)
   const priceLabel = costBase ? `${costBase} / 人` : null
