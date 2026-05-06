@@ -96,7 +96,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     setPinLng(r.lng)
     setPinLat(r.lat)
     setGeoResults([])
-    setSearchQuery('')
+    setSearchQuery(r.postal_code ? `${r.address} · ${r.postal_code}` : r.address)
   }
 
   async function handleSave() {
@@ -297,15 +297,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
             </div>
           )}
 
-          {address ? (
-            <p style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
-              {address}{postalCode ? ` · ${postalCode}` : ''}
-            </p>
-          ) : (
-            <p style={{ fontSize: 12, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', marginBottom: 14 }}>
-              请搜索并从下拉列表中选择地址
-            </p>
-          )}
 
           {/* Cuisine tags */}
           <FormSection label="菜系">
