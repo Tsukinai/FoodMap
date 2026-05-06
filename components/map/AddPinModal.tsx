@@ -96,7 +96,7 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     setPinLng(r.lng)
     setPinLat(r.lat)
     setGeoResults([])
-    setSearchQuery(r.postal_code ? `${r.address} · ${r.postal_code}` : r.address)
+    setSearchQuery(r.address)
   }
 
   async function handleSave() {
