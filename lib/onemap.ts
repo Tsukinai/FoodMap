@@ -30,23 +30,61 @@ async function getOneMapToken(): Promise<string | null> {
   }
 }
 
-export async function getPlanningArea(lat: number, lng: number): Promise<string | null> {
+// ─── Planning area (point-in-polygon) ────────────────────────────────────────
+// /api/public/popapi/getPlanningArea (by lat/lon) requires a paid account tier.
+// Instead we fetch all 55 area polygons once and do a local PiP check.
+
+type MultiPolygon = { type: 'MultiPolygon'; coordinates: number[][][][] }
+type PlanningAreaEntry = { pln_area_n: string; geojson: MultiPolygon }
+let _areaCache: { areas: PlanningAreaEntry[]; fetchedAt: number } | null = null
+
+async function fetchAllPlanningAreas(): Promise<PlanningAreaEntry[] | null> {
+  const now = Date.now()
+  if (_areaCache && now - _areaCache.fetchedAt < 86_400_000) return _areaCache.areas
+
   const token = await getOneMapToken()
   if (!token) return null
   try {
     const res = await fetch(
-      `https://www.onemap.gov.sg/api/public/planningarea/query?lat=${lat}&lng=${lng}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }
+      'https://www.onemap.gov.sg/api/public/popapi/getAllPlanningarea',
+      { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
     )
     if (!res.ok) return null
     const data = await res.json()
-    const area = Array.isArray(data) ? data[0]?.pln_area_n : data?.pln_area_n
-    return typeof area === 'string' ? area : null
+    const raw: { pln_area_n: string; geojson: string }[] = data?.SearchResults
+    if (!Array.isArray(raw)) return null
+    const areas = raw.map(r => ({ pln_area_n: r.pln_area_n, geojson: JSON.parse(r.geojson) as MultiPolygon }))
+    _areaCache = { areas, fetchedAt: now }
+    return areas
   } catch {
     return null
   }
 }
 
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]
+    const [xj, yj] = ring[j]
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+export async function getPlanningArea(lat: number, lng: number): Promise<string | null> {
+  const areas = await fetchAllPlanningAreas()
+  if (!areas) return null
+  for (const area of areas) {
+    if (area.geojson.coordinates.some(polygon => pointInRing(lng, lat, polygon[0]))) {
+      return area.pln_area_n
+    }
+  }
+  return null
+}
+
+// ─── Address search ───────────────────────────────────────────────────────────
 export async function searchOneMap(query: string): Promise<OneMapResult[]> {
   const params = new URLSearchParams({
     searchVal: query,
@@ -62,7 +100,6 @@ export async function searchOneMap(query: string): Promise<OneMapResult[]> {
   if (!res.ok) return []
 
   const data = await res.json()
-  // OneMap returns empty string for no results
   if (!data.results || data.results === 'NIL') return []
 
   return data.results as OneMapResult[]
@@ -74,7 +111,6 @@ export function parseOneMapResult(result: OneMapResult) {
   return {
     address: result.ADDRESS,
     postal_code: result.POSTAL,
-    // Note: API field is correctly spelled LONGITUDE (not LONGTITUDE as in some older docs)
     lng: Number.isFinite(lng) ? lng : null,
     lat: Number.isFinite(lat) ? lat : null,
   }

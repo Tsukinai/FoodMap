@@ -244,7 +244,7 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
               </div>
 
               {/* Address */}
-              {restaurant.address && (
+              {(restaurant.address || restaurant.planning_area) && (
                 <div
                   style={{
                     fontFamily: 'var(--font-geist-mono)',
@@ -253,8 +253,14 @@ export default function PinMarker({ restaurant, isOwner, editMode, isSelected, o
                     marginBottom: 10,
                   }}
                 >
-                  📍 {restaurant.address}
-                  {restaurant.postal_code ? ` · ${restaurant.postal_code}` : ''}
+                  {restaurant.address ? (
+                    <>
+                      📍 {restaurant.address}
+                      {restaurant.planning_area ? ` · ${restaurant.planning_area}` : ''}
+                    </>
+                  ) : (
+                    <>📍 {restaurant.planning_area}</>
+                  )}
                 </div>
               )}
 
