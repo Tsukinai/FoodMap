@@ -137,7 +137,6 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(31,28,24,0.4)', backdropFilter: 'blur(2px)' }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         className="relative rounded-xl overflow-hidden flex flex-col"

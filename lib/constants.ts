@@ -89,6 +89,29 @@ export function postalCodeToRegion(postalCode: string | null | undefined): strin
   return POSTAL_SECTOR_TO_REGION[postalCode.trim().slice(0, 2)] ?? null
 }
 
+export const SINGAPORE_REGION_GROUPS: { label: string; areas: string[] }[] = [
+  {
+    label: '中区',
+    areas: ['BISHAN', 'BUKIT MERAH', 'BUKIT TIMAH', 'DOWNTOWN CORE', 'GEYLANG', 'KALLANG', 'MARINA EAST', 'MARINA SOUTH', 'MUSEUM', 'NEWTON', 'NOVENA', 'OUTRAM', 'QUEENSTOWN', 'RIVER VALLEY', 'ROCHOR', 'SINGAPORE RIVER', 'SOUTHERN ISLANDS', 'STRAITS VIEW', 'TANGLIN', 'TOA PAYOH'],
+  },
+  {
+    label: '东区',
+    areas: ['BEDOK', 'CHANGI', 'CHANGI BAY', 'PASIR RIS', 'PAYA LEBAR', 'TAMPINES'],
+  },
+  {
+    label: '北区',
+    areas: ['CENTRAL WATER CATCHMENT', 'LIM CHU KANG', 'MANDAI', 'SEMBAWANG', 'SIMPANG', 'SUNGEI KADUT', 'WOODLANDS', 'YISHUN'],
+  },
+  {
+    label: '东北区',
+    areas: ['ANG MO KIO', 'HOUGANG', 'NORTH-EASTERN ISLANDS', 'PUNGGOL', 'SENGKANG', 'SERANGOON'],
+  },
+  {
+    label: '西区',
+    areas: ['BOON LAY', 'BUKIT BATOK', 'BUKIT PANJANG', 'CHOA CHU KANG', 'CLEMENTI', 'JURONG EAST', 'JURONG WEST', 'PIONEER', 'TENGAH', 'TUAS', 'WESTERN ISLANDS', 'WESTERN WATER CATCHMENT'],
+  },
+]
+
 export const CUISINE_STYLES: Record<string, { color: string; bg: string }> = {
   // Singapore-specific cuisines
   '海南': { color: '#b8820a', bg: '#fdf5e0' },
