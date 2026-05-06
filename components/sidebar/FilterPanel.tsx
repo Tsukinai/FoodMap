@@ -39,7 +39,19 @@ export default function FilterPanel({
   showViewToggle = false,
 }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
-  const [areaExpanded, setAreaExpanded] = useState(false)
+  const [sectionExpanded, setSectionExpanded] = useState<Record<string, boolean>>({
+    status: true,
+    area: false,
+    cuisine: true,
+    dish: true,
+    taste: true,
+    scene: true,
+    rating: true,
+  })
+
+  function toggleSection(key: string) {
+    setSectionExpanded(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   function toggleExpand(id: string) {
     setExpandedParents(prev => {
@@ -254,44 +266,62 @@ export default function FilterPanel({
           )}
         </div>
 
+        {/* ── Status ── */}
+        <section>
+          <CollapsibleFilterLabel
+            count={filters.status?.length ?? 0}
+            expanded={sectionExpanded.status}
+            onToggle={() => toggleSection('status')}
+          >
+            状态
+          </CollapsibleFilterLabel>
+          {sectionExpanded.status && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => {
+                const active = (filters.status ?? []).includes(val)
+                return (
+                  <button
+                    key={val}
+                    onClick={() => toggleStatus(val)}
+                    style={{
+                      flex: 1,
+                      padding: '7px 0',
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      border: active
+                        ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
+                        : '1.5px solid var(--fm-line-2)',
+                      background: active
+                        ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
+                        : 'var(--fm-muted)',
+                      color: active
+                        ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
+                        : 'var(--fm-ink-3)',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
         {/* ── 区域 ── */}
         {availableAreas.length > 0 && (
           <section>
-            <button
-              onClick={() => setAreaExpanded(v => !v)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                marginBottom: areaExpanded ? 8 : 0,
-                gap: 6,
-                fontFamily: 'var(--font-geist-mono)',
-                fontSize: 10,
-                fontWeight: 500,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: 'var(--fm-ink-4)',
-              }}
+            <CollapsibleFilterLabel
+              count={filters.areas?.length ?? 0}
+              expanded={sectionExpanded.area}
+              onToggle={() => toggleSection('area')}
             >
-              <span style={{ flex: 1, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
-                区域
-                {(filters.areas?.length ?? 0) > 0 && (
-                  <span className="fm-filter-label-count">{filters.areas?.length}</span>
-                )}
-              </span>
-              <svg
-                width="10" height="10" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                style={{ transform: areaExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}
-              >
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-            {areaExpanded && (
+              区域
+            </CollapsibleFilterLabel>
+            {sectionExpanded.area && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {SINGAPORE_REGION_GROUPS.map(({ label, areas }) => {
                   const regionAreas = areas.filter(a => availableAreas.includes(a))
@@ -354,239 +384,242 @@ export default function FilterPanel({
           </section>
         )}
 
-        {/* ── Status ── */}
-        <section>
-          <FilterLabel count={filters.status?.length ?? 0}>状态</FilterLabel>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {([['want', '想吃'], ['visited', '已吃']] as [RestaurantStatus, string][]).map(([val, label]) => {
-              const active = (filters.status ?? []).includes(val)
-              return (
-                <button
-                  key={val}
-                  onClick={() => toggleStatus(val)}
-                  style={{
-                    flex: 1,
-                    padding: '7px 0',
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    border: active
-                      ? val === 'want' ? '1.5px solid #c8883a' : '1.5px solid var(--fm-green)'
-                      : '1.5px solid var(--fm-line-2)',
-                    background: active
-                      ? val === 'want' ? '#fdf0e6' : '#eaf4ee'
-                      : 'var(--fm-muted)',
-                    color: active
-                      ? val === 'want' ? '#c8883a' : 'var(--fm-green)'
-                      : 'var(--fm-ink-3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </section>
-
         {/* ── Cuisine ── */}
         <section>
-          <FilterLabel count={filters.cuisine_tags.length}>菜系</FilterLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {cuisineTopLevel.map((tag) => {
-                const children = childrenByParent.get(tag.id) ?? []
-                const isExpanded = expandedParents.has(tag.id)
-                const active = filters.cuisine_tags.includes(tag.name)
-                const { color: fg, bg } = CUISINE_STYLES[tag.name] ?? { color: 'var(--fm-ink-2)', bg: 'var(--fm-muted)' }
-                return (
-                  <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <button
-                      onClick={() => toggleArr('cuisine_tags', tag.name)}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: 8,
-                        fontSize: 12.5,
-                        fontWeight: 500,
-                        fontFamily: 'var(--font-geist-sans)',
-                        background: active ? fg : bg,
-                        color: active ? '#fff' : fg,
-                        border: `1.5px solid ${active ? fg : 'transparent'}`,
-                        cursor: 'pointer',
-                        transition: 'all 0.12s',
-                      }}
-                    >
-                      {tag.name}
-                    </button>
-                    {children.length > 0 && (
+          <CollapsibleFilterLabel
+            count={filters.cuisine_tags.length}
+            expanded={sectionExpanded.cuisine}
+            onToggle={() => toggleSection('cuisine')}
+          >
+            菜系
+          </CollapsibleFilterLabel>
+          {sectionExpanded.cuisine && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {cuisineTopLevel.map((tag) => {
+                  const children = childrenByParent.get(tag.id) ?? []
+                  const isExpanded = expandedParents.has(tag.id)
+                  const active = filters.cuisine_tags.includes(tag.name)
+                  const { color: fg, bg } = CUISINE_STYLES[tag.name] ?? { color: 'var(--fm-ink-2)', bg: 'var(--fm-muted)' }
+                  return (
+                    <div key={tag.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <button
-                        onClick={() => toggleExpand(tag.id)}
-                        title={isExpanded ? '收起' : '展开'}
+                        onClick={() => toggleArr('cuisine_tags', tag.name)}
                         style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 6,
-                          border: '1.5px solid var(--fm-line-2)',
-                          background: 'var(--fm-muted)',
+                          padding: '5px 10px',
+                          borderRadius: 8,
+                          fontSize: 12.5,
+                          fontWeight: 500,
+                          fontFamily: 'var(--font-geist-sans)',
+                          background: active ? fg : bg,
+                          color: active ? '#fff' : fg,
+                          border: `1.5px solid ${active ? fg : 'transparent'}`,
                           cursor: 'pointer',
-                          color: 'var(--fm-ink-2)',
-                          fontSize: 11,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: 0,
-                          transition: 'transform 0.15s',
-                          transform: isExpanded ? 'rotate(90deg)' : 'none',
-                          flexShrink: 0,
+                          transition: 'all 0.12s',
                         }}
                       >
-                        ▸
+                        {tag.name}
                       </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Expanded sub-cuisine panels */}
-            {cuisineTopLevel
-              .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
-              .map(parent => {
-                const parentFg = CUISINE_STYLES[parent.name]?.color ?? 'var(--fm-ink-2)'
-                return (
-                  <div
-                    key={parent.id}
-                    style={{
-                      paddingLeft: 8,
-                      borderLeft: `2px solid ${parentFg}`,
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 4,
-                    }}
-                  >
-                    {childrenByParent.get(parent.id)!.map(child => {
-                      const childActive = filters.cuisine_tags.includes(child.name)
-                      const childFg = CUISINE_STYLES[child.name]?.color ?? parentFg
-                      const childBg = CUISINE_STYLES[child.name]?.bg ?? 'var(--fm-muted)'
-                      return (
+                      {children.length > 0 && (
                         <button
-                          key={child.id}
-                          onClick={() => toggleArr('cuisine_tags', child.name)}
+                          onClick={() => toggleExpand(tag.id)}
+                          title={isExpanded ? '收起' : '展开'}
                           style={{
-                            padding: '3px 8px',
+                            width: 24,
+                            height: 24,
                             borderRadius: 6,
-                            fontSize: 11.5,
-                            fontWeight: 500,
-                            fontFamily: 'var(--font-geist-sans)',
-                            background: childActive ? childFg : childBg,
-                            color: childActive ? '#fff' : childFg,
-                            border: `1.5px solid ${childActive ? childFg : 'transparent'}`,
+                            border: '1.5px solid var(--fm-line-2)',
+                            background: 'var(--fm-muted)',
                             cursor: 'pointer',
-                            transition: 'all 0.12s',
+                            color: 'var(--fm-ink-2)',
+                            fontSize: 11,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: 0,
+                            transition: 'transform 0.15s',
+                            transform: isExpanded ? 'rotate(90deg)' : 'none',
+                            flexShrink: 0,
                           }}
                         >
-                          {child.name}
+                          ▸
                         </button>
-                      )
-                    })}
-                  </div>
-                )
-              })
-            }
-          </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Expanded sub-cuisine panels */}
+              {cuisineTopLevel
+                .filter(tag => expandedParents.has(tag.id) && (childrenByParent.get(tag.id)?.length ?? 0) > 0)
+                .map(parent => {
+                  const parentFg = CUISINE_STYLES[parent.name]?.color ?? 'var(--fm-ink-2)'
+                  return (
+                    <div
+                      key={parent.id}
+                      style={{
+                        paddingLeft: 8,
+                        borderLeft: `2px solid ${parentFg}`,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 4,
+                      }}
+                    >
+                      {childrenByParent.get(parent.id)!.map(child => {
+                        const childActive = filters.cuisine_tags.includes(child.name)
+                        const childFg = CUISINE_STYLES[child.name]?.color ?? parentFg
+                        const childBg = CUISINE_STYLES[child.name]?.bg ?? 'var(--fm-muted)'
+                        return (
+                          <button
+                            key={child.id}
+                            onClick={() => toggleArr('cuisine_tags', child.name)}
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              fontSize: 11.5,
+                              fontWeight: 500,
+                              fontFamily: 'var(--font-geist-sans)',
+                              background: childActive ? childFg : childBg,
+                              color: childActive ? '#fff' : childFg,
+                              border: `1.5px solid ${childActive ? childFg : 'transparent'}`,
+                              cursor: 'pointer',
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {child.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              }
+            </div>
+          )}
         </section>
 
         {/* ── Dish type (种类) ── */}
         <section>
-          <FilterLabel count={filters.dish_tags.length}>种类</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {dishTags.map((tag) => {
-              const active = filters.dish_tags.includes(tag.name)
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleArr('dish_tags', tag.name)}
-                  className={`fm-chip${active ? ' active' : ''}`}
-                  style={{ fontSize: 12 }}
-                >
-                  {tag.name}
-                </button>
-              )
-            })}
-          </div>
+          <CollapsibleFilterLabel
+            count={filters.dish_tags.length}
+            expanded={sectionExpanded.dish}
+            onToggle={() => toggleSection('dish')}
+          >
+            种类
+          </CollapsibleFilterLabel>
+          {sectionExpanded.dish && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {dishTags.map((tag) => {
+                const active = filters.dish_tags.includes(tag.name)
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleArr('dish_tags', tag.name)}
+                    className={`fm-chip${active ? ' active' : ''}`}
+                    style={{ fontSize: 12 }}
+                  >
+                    {tag.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* ── Taste ── */}
         <section>
-          <FilterLabel count={filters.taste_tags?.length ?? 0}>口味</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {tasteTags.map((tag) => {
-              const active = (filters.taste_tags ?? []).includes(tag.name)
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleArr('taste_tags', tag.name)}
-                  className={`fm-chip fm-chip-taste${active ? ' active' : ''}`}
-                  style={{ fontSize: 12 }}
-                >
-                  {tag.name}
-                </button>
-              )
-            })}
-          </div>
+          <CollapsibleFilterLabel
+            count={filters.taste_tags?.length ?? 0}
+            expanded={sectionExpanded.taste}
+            onToggle={() => toggleSection('taste')}
+          >
+            口味
+          </CollapsibleFilterLabel>
+          {sectionExpanded.taste && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {tasteTags.map((tag) => {
+                const active = (filters.taste_tags ?? []).includes(tag.name)
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleArr('taste_tags', tag.name)}
+                    className={`fm-chip fm-chip-taste${active ? ' active' : ''}`}
+                    style={{ fontSize: 12 }}
+                  >
+                    {tag.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* ── Scene ── */}
         <section>
-          <FilterLabel count={filters.scene_tags?.length ?? 0}>场合</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {sceneTags.map((tag) => {
-              const active = (filters.scene_tags ?? []).includes(tag.name)
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => toggleArr('scene_tags', tag.name)}
-                  className={`fm-chip fm-chip-scene${active ? ' active' : ''}`}
-                  style={{ fontSize: 12 }}
-                >
-                  {tag.name}
-                </button>
-              )
-            })}
-          </div>
+          <CollapsibleFilterLabel
+            count={filters.scene_tags?.length ?? 0}
+            expanded={sectionExpanded.scene}
+            onToggle={() => toggleSection('scene')}
+          >
+            场合
+          </CollapsibleFilterLabel>
+          {sectionExpanded.scene && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {sceneTags.map((tag) => {
+                const active = (filters.scene_tags ?? []).includes(tag.name)
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => toggleArr('scene_tags', tag.name)}
+                    className={`fm-chip fm-chip-scene${active ? ' active' : ''}`}
+                    style={{ fontSize: 12 }}
+                  >
+                    {tag.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* ── Rating ── */}
         <section>
-          <FilterLabel count={filters.ratings?.length ?? 0}>评分</FilterLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {RATING_ORDER.map((r) => {
-              const active = (filters.ratings ?? []).includes(r)
-              const { bg, color, border } = getRatingStyle(r)
-              return (
-                <button
-                  key={r}
-                  onClick={() => toggleRating(r)}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    fontWeight: 500,
-                    fontFamily: 'var(--font-geist-sans)',
-                    background: active ? bg : 'var(--fm-muted)',
-                    color: active ? color : 'var(--fm-ink-3)',
-                    border: active ? `1.5px solid ${border}` : '1.5px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {r}
-                </button>
-              )
-            })}
-          </div>
+          <CollapsibleFilterLabel
+            count={filters.ratings?.length ?? 0}
+            expanded={sectionExpanded.rating}
+            onToggle={() => toggleSection('rating')}
+          >
+            评分
+          </CollapsibleFilterLabel>
+          {sectionExpanded.rating && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {RATING_ORDER.map((r) => {
+                const active = (filters.ratings ?? []).includes(r)
+                const { bg, color, border } = getRatingStyle(r)
+                return (
+                  <button
+                    key={r}
+                    onClick={() => toggleRating(r)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-geist-sans)',
+                      background: active ? bg : 'var(--fm-muted)',
+                      color: active ? color : 'var(--fm-ink-3)',
+                      border: active ? `1.5px solid ${border}` : '1.5px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {r}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </section>
 
       </div>
@@ -691,22 +724,50 @@ export default function FilterPanel({
   )
 }
 
-// ── FilterLabel helper ────────────────────────────────────────────────────────
-function FilterLabel({
+// ── CollapsibleFilterLabel ────────────────────────────────────────────────────
+function CollapsibleFilterLabel({
   children,
   count = 0,
-  countLabel,
+  expanded,
+  onToggle,
 }: {
   children: React.ReactNode
   count?: number
-  countLabel?: string
+  expanded: boolean
+  onToggle: () => void
 }) {
   return (
-    <p className="fm-filter-label">
-      {children}
-      {count > 0 && (
-        <span className="fm-filter-label-count">{countLabel ?? count}</span>
-      )}
-    </p>
+    <button
+      onClick={onToggle}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        marginBottom: expanded ? 8 : 0,
+        gap: 6,
+        fontFamily: 'var(--font-geist-mono)',
+        fontSize: 10,
+        fontWeight: 500,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: 'var(--fm-ink-4)',
+      }}
+    >
+      <span style={{ flex: 1, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+        {children}
+        {count > 0 && <span className="fm-filter-label-count">{count}</span>}
+      </span>
+      <svg
+        width="10" height="10" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }}
+      >
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
   )
 }
