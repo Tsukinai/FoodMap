@@ -274,9 +274,7 @@ function RestaurantCard({
   isOwner?: boolean
   onClick?: () => void
 }) {
-  const cuisineTags = r.tags.filter((t) => t.type === 'cuisine')
-  const otherTags = r.tags.filter((t) => t.type !== 'cuisine')
-  const displayTags = [...cuisineTags, ...otherTags].slice(0, 4)
+  const displayTags = r.tags.filter((t) => t.type === 'taste' || t.type === 'scene')
 
   const costBase = formatCostRange(r.cost_min, r.cost_max)
   const priceLabel = costBase ? `${costBase} / 人` : null
