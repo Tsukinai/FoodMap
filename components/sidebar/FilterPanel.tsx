@@ -16,12 +16,12 @@ interface Props {
   restaurantCount: number
   user: User | null
   isOwner: boolean
-  onCollapse?: () => void
-  viewMode?: 'map' | 'list' | 'guestbook'
-  onViewModeChange?: (mode: 'map' | 'list' | 'guestbook') => void
   searchQuery?: string
   onSearchChange?: (q: string) => void
   availableAreas?: string[]
+  viewMode?: 'map' | 'list' | 'guestbook'
+  onViewModeChange?: (mode: 'map' | 'list' | 'guestbook') => void
+  showViewToggle?: boolean
 }
 
 const MAX_COST = 300
@@ -33,12 +33,12 @@ export default function FilterPanel({
   restaurantCount,
   user,
   isOwner,
-  onCollapse,
-  viewMode = 'map' as 'map' | 'list' | 'guestbook',
-  onViewModeChange,
   searchQuery = '',
   onSearchChange,
   availableAreas = [],
+  viewMode = 'map',
+  onViewModeChange,
+  showViewToggle = false,
 }: Props) {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
   const [areaExpanded, setAreaExpanded] = useState(false)
@@ -146,27 +146,9 @@ export default function FilterPanel({
         color: 'var(--fm-ink)',
       }}
     >
-      {/* ── Header ── */}
-      <div
-        className="px-5 pt-5 pb-4 flex flex-col gap-3"
-        style={{ borderBottom: '1px solid var(--fm-line)' }}
-      >
-        <div className="flex items-center justify-between">
-          <div
-            style={{
-              fontFamily: 'var(--font-instrument-serif)',
-              fontSize: 26,
-              letterSpacing: '-0.01em',
-              lineHeight: 1,
-            }}
-          >
-            食迹<span style={{ color: 'var(--fm-orange)' }}>.</span>
-          </div>
-
-        </div>
-
-        {/* View mode toggle */}
-        {onViewModeChange && (
+      {/* ── View toggle (mobile only) ── */}
+      {showViewToggle && onViewModeChange && (
+        <div style={{ padding: '10px 12px 0', borderBottom: '1px solid var(--fm-line)' }}>
           <div
             style={{
               display: 'flex',
@@ -174,6 +156,7 @@ export default function FilterPanel({
               borderRadius: 10,
               padding: 3,
               gap: 2,
+              marginBottom: 10,
             }}
           >
             {(['map', 'list', 'guestbook'] as const).map((mode) => (
@@ -223,8 +206,8 @@ export default function FilterPanel({
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Scrollable filter body ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -43,6 +43,7 @@ export default function HomePage() {
   const [filters, setFilters] = useState<FilterPayload>(DEFAULT_FILTERS)
   const [loading, setLoading] = useState(true)
   const [addingPin, setAddingPin] = useState(false)
+  const [editMode, setEditMode] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
@@ -133,81 +134,236 @@ export default function HomePage() {
   useEffect(() => { fetchTags() }, [fetchTags])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
+    <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
       <DisclaimerModal />
-      {/* Mobile backdrop */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0"
-          style={{ background: 'var(--fm-overlay)', zIndex: 40 }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
 
-      {/* Sidebar — collapsible wrapper */}
-      <div
-        style={isMobile ? {
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          height: '100%',
-          width: sidebarOpen ? 292 : 0,
-          zIndex: 50,
-          overflow: 'hidden',
-          transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
-        } : {
-          width: sidebarOpen ? 292 : 0,
+      {/* ── Header ── */}
+      <header
+        style={{
+          position: 'relative',
+          height: 52,
           flexShrink: 0,
-          overflow: 'hidden',
-          transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 10,
+          paddingRight: 14,
+          gap: 10,
+          background: 'var(--fm-paper)',
+          borderBottom: '1px solid var(--fm-line)',
+          zIndex: 20,
         }}
       >
-        <FilterPanel
-          allTags={allTags}
-          filters={filters}
-          onChange={setFilters}
-          restaurantCount={displayedRestaurants.length}
-          user={user}
-          isOwner={isOwner}
-          onCollapse={() => setSidebarOpen(false)}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          availableAreas={availableAreas}
-        />
-      </div>
-
-      {/* Map area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Hamburger toggle — always visible */}
+        {/* Hamburger */}
         <button
           onClick={() => setSidebarOpen(s => !s)}
           title={sidebarOpen ? '收起筛选' : '展开筛选'}
           style={{
-            position: 'absolute',
-            left: 16,
-            top: 16,
-            zIndex: 10,
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: 'var(--fm-paper)',
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            background: sidebarOpen ? 'var(--fm-cream)' : 'transparent',
             border: '1px solid var(--fm-line)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 17,
-            color: 'var(--fm-ink)',
+            fontSize: 15,
+            color: 'var(--fm-ink-2)',
             cursor: 'pointer',
+            flexShrink: 0,
           }}
         >
           ☰
         </button>
 
+        {/* Logo */}
+        <div
+          style={{
+            fontFamily: 'var(--font-instrument-serif)',
+            fontSize: 22,
+            letterSpacing: '-0.01em',
+            lineHeight: 1,
+            flexShrink: 0,
+          }}
+        >
+          食迹<span style={{ color: 'var(--fm-orange)' }}>.</span>
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* View mode tabs — desktop only, centered absolutely */}
+        {!isMobile && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              background: 'var(--fm-cream)',
+              borderRadius: 9,
+              padding: 3,
+              gap: 2,
+            }}
+          >
+            {([
+              ['map', '地图', <svg key="m" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>],
+              ['list', '列表', <svg key="l" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>],
+              ['guestbook', '留言', <svg key="g" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>],
+            ] as [string, string, React.ReactNode][]).map(([mode, label, icon]) => {
+              const active = viewMode === mode
+              return (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setViewMode(mode as 'map' | 'list' | 'guestbook')
+                    if (mode !== 'map') setEditMode(false)
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    height: 30,
+                    paddingLeft: 10,
+                    paddingRight: 10,
+                    borderRadius: 6,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12.5,
+                    fontFamily: 'var(--font-geist-sans)',
+                    fontWeight: active ? 600 : 400,
+                    background: active ? 'var(--fm-paper)' : 'transparent',
+                    color: active ? 'var(--fm-ink)' : 'var(--fm-ink-3)',
+                    boxShadow: active ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {icon}
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Owner controls — map mode only */}
+        {isOwner && viewMode === 'map' && (
+          <>
+            {!isMobile && <div style={{ width: 1, height: 22, background: 'var(--fm-line)', flexShrink: 0 }} />}
+            {isMobile ? (
+              /* Mobile: icon-only */
+              <>
+                <button
+                  onClick={() => setEditMode(v => !v)}
+                  title={editMode ? '退出编辑' : '编辑模式'}
+                  style={{
+                    width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                    border: `1.5px solid ${editMode ? 'var(--fm-ink)' : 'var(--fm-line-2)'}`,
+                    background: editMode ? 'var(--fm-ink)' : 'var(--fm-paper)',
+                    color: editMode ? 'var(--fm-paper)' : 'var(--fm-ink-2)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setAddingPin(true)}
+                  title="打地图钉"
+                  style={{
+                    width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                    border: 'none', background: 'var(--fm-orange)', color: '#fff',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, fontWeight: 400, lineHeight: 1,
+                  }}
+                >
+                  +
+                </button>
+              </>
+            ) : (
+              /* Desktop: text buttons */
+              <>
+                <button
+                  onClick={() => setEditMode(v => !v)}
+                  style={{
+                    height: 32, paddingLeft: 12, paddingRight: 12, borderRadius: 8, flexShrink: 0,
+                    border: `1.5px solid ${editMode ? 'var(--fm-ink)' : 'var(--fm-line-2)'}`,
+                    background: editMode ? 'var(--fm-ink)' : 'var(--fm-paper)',
+                    color: editMode ? 'var(--fm-paper)' : 'var(--fm-ink-2)',
+                    fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {editMode ? '退出编辑' : '编辑模式'}
+                </button>
+                <button
+                  onClick={() => setAddingPin(true)}
+                  style={{
+                    height: 32, paddingLeft: 12, paddingRight: 12, borderRadius: 8, flexShrink: 0,
+                    border: 'none', background: 'var(--fm-orange)', color: '#fff',
+                    fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ＋ 打地图钉
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </header>
+
+      {/* ── Body ── */}
+      <div className="flex flex-1 overflow-hidden" style={{ position: 'relative' }}>
+        {/* Mobile backdrop */}
+        {isMobile && sidebarOpen && (
+          <div
+            className="fixed inset-0"
+            style={{ background: 'var(--fm-overlay)', zIndex: 40, top: 52 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar — collapsible wrapper */}
+        <div
+          style={isMobile ? {
+            position: 'fixed',
+            top: 52,
+            left: 0,
+            height: 'calc(100% - 52px)',
+            width: sidebarOpen ? 292 : 0,
+            zIndex: 50,
+            overflow: 'hidden',
+            transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+          } : {
+            width: sidebarOpen ? 292 : 0,
+            flexShrink: 0,
+            overflow: 'hidden',
+            transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+          }}
+        >
+          <FilterPanel
+            allTags={allTags}
+            filters={filters}
+            onChange={setFilters}
+            restaurantCount={displayedRestaurants.length}
+            user={user}
+            isOwner={isOwner}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            availableAreas={availableAreas}
+            viewMode={viewMode}
+            onViewModeChange={(mode) => {
+              setViewMode(mode)
+              if (mode !== 'map') setEditMode(false)
+            }}
+            showViewToggle={isMobile}
+          />
+        </div>
+
         {/* Main content: map, list, or guestbook */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           {viewMode === 'guestbook' ? (
             <GuestbookPanel user={user} isOwner={isOwner} />
           ) : viewMode === 'list' ? (
@@ -231,6 +387,7 @@ export default function HomePage() {
               filters={filters}
               addingPin={addingPin}
               onAddingPinChange={setAddingPin}
+              editMode={editMode}
               onRestaurantSaved={() => {
                 fetchRestaurants()
                 fetchTags()
