@@ -9,6 +9,7 @@ import FilterPanel from '@/components/sidebar/FilterPanel'
 import RestaurantList from '@/components/RestaurantList'
 import GuestbookPanel from '@/components/guestbook/GuestbookPanel'
 import DisclaimerModal from '@/components/DisclaimerModal'
+import RecommendChat from '@/components/recommend/RecommendChat'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -47,6 +48,8 @@ export default function HomePage() {
   const [isMobile, setIsMobile] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
+  const [chatOpen, setChatOpen] = useState(false)
+  const [highlightedIds, setHighlightedIds] = useState<string[] | null>(null)
 
   const supabase = createClient()
 
@@ -155,7 +158,10 @@ export default function HomePage() {
       >
         {/* Hamburger */}
         <button
-          onClick={() => setSidebarOpen(s => !s)}
+          onClick={() => {
+            setSidebarOpen(s => !s)
+            if (isMobile && !sidebarOpen) setChatOpen(false)
+          }}
           title={sidebarOpen ? '收起筛选' : '展开筛选'}
           style={{
             width: 34,
@@ -312,16 +318,69 @@ export default function HomePage() {
             )}
           </>
         )}
+
+        {/* Chat toggle — far right, mirrors hamburger on left */}
+        <button
+          onClick={() => {
+            setChatOpen(v => !v)
+            if (isMobile && !chatOpen) setSidebarOpen(false)
+          }}
+          title={chatOpen ? '收起 AI 推荐' : '展开 AI 推荐'}
+          style={{
+            position: 'relative',
+            height: 32,
+            paddingLeft: 12,
+            paddingRight: 12,
+            borderRadius: 8,
+            background: chatOpen ? 'var(--fm-ink)' : 'transparent',
+            border: `1px solid ${chatOpen ? 'var(--fm-ink)' : 'var(--fm-line)'}`,
+            color: chatOpen ? 'var(--fm-paper)' : 'var(--fm-ink-2)',
+            fontSize: 12.5,
+            fontFamily: 'var(--font-geist-sans)',
+            fontWeight: 500,
+            cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          AI 推荐
+          {highlightedIds !== null && highlightedIds.length > 0 && !chatOpen && (
+            <span
+              style={{
+                position: 'absolute',
+                top: -3,
+                right: -3,
+                minWidth: 14,
+                height: 14,
+                padding: '0 3px',
+                borderRadius: 99,
+                background: 'var(--fm-orange)',
+                color: '#fff',
+                fontSize: 9,
+                fontFamily: 'var(--font-geist-mono)',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+                border: '1.5px solid var(--fm-paper)',
+              }}
+            >
+              {highlightedIds.length}
+            </span>
+          )}
+        </button>
       </header>
 
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden" style={{ position: 'relative' }}>
-        {/* Mobile backdrop */}
-        {isMobile && sidebarOpen && (
+        {/* Mobile backdrop — covers either open sidebar */}
+        {isMobile && (sidebarOpen || chatOpen) && (
           <div
             className="fixed inset-0"
             style={{ background: 'var(--fm-overlay)', zIndex: 40, top: 52 }}
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => { setSidebarOpen(false); setChatOpen(false) }}
           />
         )}
 
@@ -388,12 +447,42 @@ export default function HomePage() {
               addingPin={addingPin}
               onAddingPinChange={setAddingPin}
               editMode={editMode}
+              highlightedIds={highlightedIds}
               onRestaurantSaved={() => {
                 fetchRestaurants()
                 fetchTags()
               }}
             />
           )}
+        </div>
+
+        {/* Right chat sidebar — mirrors FilterPanel on the left */}
+        <div
+          style={isMobile ? {
+            position: 'fixed',
+            top: 52,
+            right: 0,
+            height: 'calc(100% - 52px)',
+            width: chatOpen ? 'min(360px, 100vw)' : 0,
+            zIndex: 50,
+            overflow: 'hidden',
+            transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+          } : {
+            width: chatOpen ? 360 : 0,
+            flexShrink: 0,
+            overflow: 'hidden',
+            transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+          }}
+        >
+          <div style={{ width: isMobile ? 'min(360px, 100vw)' : 360, height: '100%' }}>
+            <RecommendChat
+              user={user}
+              onClose={() => setChatOpen(false)}
+              onHighlight={setHighlightedIds}
+              onClearHighlight={() => setHighlightedIds(null)}
+              highlightCount={highlightedIds !== null ? highlightedIds.length : null}
+            />
+          </div>
         </div>
       </div>
     </div>

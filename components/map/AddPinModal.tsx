@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { Tag, Restaurant, RestaurantStatus, RestaurantRating } from '@/lib/types'
 import { RATING_ORDER } from '@/lib/types'
 import { getTagsByType } from '@/lib/utils'
@@ -78,32 +78,26 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [pinLat, setPinLat] = useState(restaurant?.location_lat ?? lat ?? 0)
 
   type PlaceResult = { name: string; address: string; postal_code: string; lat: number; lng: number }
-  const [placesResults, setPlacesResults] = useState<PlaceResult[]>([])
-  const skipPlacesRef = useRef(false)
+  const [addressResults, setAddressResults] = useState<PlaceResult[]>([])
 
   useEffect(() => {
     fetch('/api/tags').then((r) => r.json()).then(setAllTags)
   }, [])
 
-  useEffect(() => {
-    if (skipPlacesRef.current) { skipPlacesRef.current = false; return }
-    if (name.trim().length < 2) { setPlacesResults([]); return }
-    const timer = setTimeout(async () => {
-      const res = await fetch(`/api/places?q=${encodeURIComponent(name.trim())}`)
-      const data = await res.json()
-      setPlacesResults(Array.isArray(data) ? data : [])
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [name])
+  async function searchByAddress() {
+    if (address.trim().length < 2) return
+    const res = await fetch(`/api/places?q=${encodeURIComponent(address.trim())}`)
+    const data = await res.json()
+    setAddressResults(Array.isArray(data) ? data : [])
+  }
 
-  function selectPlace(p: PlaceResult) {
-    skipPlacesRef.current = true
-    setName(p.name)
+  function selectAddress(p: PlaceResult) {
+    if (!restaurant) setName(p.name)
     setAddress(p.address)
     setPostalCode(p.postal_code)
     setPinLng(p.lng)
     setPinLat(p.lat)
-    setPlacesResults([])
+    setAddressResults([])
   }
 
   async function handleSave() {
@@ -215,53 +209,44 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           {/* Name + Address row */}
           <div className="fm-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: chainSearchOpen ? 6 : 14 }}>
             <div className="relative">
-              <FmInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="餐馆名称，输入搜索地点 *"
-              />
-              {placesResults.length > 0 && (
-                <div
-                  className="absolute top-full left-0 right-0 z-10 rounded-lg overflow-hidden"
-                  style={{
-                    border: '1px solid var(--fm-line-2)',
-                    background: 'var(--fm-paper)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                    marginTop: 4,
-                    maxHeight: 200,
-                    overflowY: 'auto',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 6px 0' }}>
-                    <button
-                      onClick={() => setPlacesResults([])}
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--fm-ink-4)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '2px 4px',
-                        lineHeight: 1,
-                      }}
-                      aria-label="关闭搜索结果"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {placesResults.map((p, i) => (
-                    <button
-                      key={i}
-                      className="fm-dropdown-item w-full text-left px-3 py-2.5"
-                      style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
-                      onClick={() => selectPlace(p)}
-                    >
-                      <div style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--fm-ink-4)', marginTop: 1 }}>{p.address}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div style={{ position: 'relative' }}>
+                <FmInput
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="餐馆名称 *"
+                />
+                {name && (
+                  <button
+                    type="button"
+                    onClick={() => setName('')}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'var(--fm-ink-4)',
+                      color: 'var(--fm-paper)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      lineHeight: 1,
+                      padding: 0,
+                      opacity: 0.7,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7' }}
+                    aria-label="清除店名"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               {!restaurant && !chainSearchOpen && (
                 <button
                   onClick={openChainSearch}
@@ -281,12 +266,88 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
                 </button>
               )}
             </div>
-            <div>
-              <FmInput
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="地址（搜索后自动填入）"
-              />
+            <div className="relative">
+              <div style={{ position: 'relative' }}>
+                <FmInput
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchByAddress() } }}
+                  placeholder="输入地址，回车搜索…"
+                />
+                {address && (
+                  <button
+                    type="button"
+                    onClick={() => { setAddress(''); setAddressResults([]) }}
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'var(--fm-ink-4)',
+                      color: 'var(--fm-paper)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      lineHeight: 1,
+                      padding: 0,
+                      opacity: 0.7,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7' }}
+                    aria-label="清除地址"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {addressResults.length > 0 && (
+                <div
+                  className="absolute top-full left-0 right-0 z-10 rounded-lg overflow-hidden"
+                  style={{
+                    border: '1px solid var(--fm-line-2)',
+                    background: 'var(--fm-paper)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                    marginTop: 4,
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 6px 0' }}>
+                    <button
+                      onClick={() => setAddressResults([])}
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--fm-ink-4)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        lineHeight: 1,
+                      }}
+                      aria-label="关闭搜索结果"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {addressResults.map((p, i) => (
+                    <button
+                      key={i}
+                      className="fm-dropdown-item w-full text-left px-3 py-2.5"
+                      style={{ color: 'var(--fm-ink-2)', borderBottom: '1px solid var(--fm-line)' }}
+                      onClick={() => selectAddress(p)}
+                    >
+                      <div style={{ fontWeight: 500, fontSize: 14 }}>{p.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fm-ink-4)', marginTop: 1 }}>{p.address}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

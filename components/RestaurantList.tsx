@@ -16,9 +16,16 @@ interface Props {
   onSaved?: () => void
 }
 
+const TAG_TYPE_STYLES: Record<string, { color: string; bg: string }> = {
+  dish:  { color: '#6b635a', bg: '#f5f0e8' },
+  taste: { color: '#a43d1f', bg: '#f0d9c4' },
+  scene: { color: '#4a3d6b', bg: '#dcd6e6' },
+}
+
 function TagBadge({ name, type }: { name: string; type: string }) {
-  const color = type === 'cuisine' ? (CUISINE_STYLES[name]?.color ?? '#6b635a') : '#6b635a'
-  const bg = type === 'cuisine' ? (CUISINE_STYLES[name]?.bg ?? '#f5f0e8') : '#f5f0e8'
+  const style = type === 'cuisine'
+    ? { color: CUISINE_STYLES[name]?.color ?? '#6b635a', bg: CUISINE_STYLES[name]?.bg ?? '#f5f0e8' }
+    : (TAG_TYPE_STYLES[type] ?? { color: '#6b635a', bg: '#f5f0e8' })
   return (
     <span
       style={{
@@ -29,8 +36,8 @@ function TagBadge({ name, type }: { name: string; type: string }) {
         fontSize: 12,
         fontFamily: 'var(--font-geist-sans)',
         fontWeight: 500,
-        color,
-        background: bg,
+        color: style.color,
+        background: style.bg,
         whiteSpace: 'nowrap',
       }}
     >
@@ -38,6 +45,13 @@ function TagBadge({ name, type }: { name: string; type: string }) {
     </span>
   )
 }
+
+const TAG_GROUPS: { type: string; label: string }[] = [
+  { type: 'cuisine', label: '菜系' },
+  { type: 'dish',    label: '种类' },
+  { type: 'taste',   label: '口味' },
+  { type: 'scene',   label: '场合' },
+]
 
 function CuisineAvatar({ tags }: { tags: Restaurant['tags'] }) {
   const cuisine = tags.find((t) => t.type === 'cuisine')
@@ -277,7 +291,9 @@ function RestaurantCard({
   isOwner?: boolean
   onClick?: () => void
 }) {
-  const displayTags = r.tags.filter((t) => t.type === 'taste' || t.type === 'scene')
+  const tagGroups = TAG_GROUPS
+    .map(({ type, label }) => ({ type, label, tags: r.tags.filter((t) => t.type === type) }))
+    .filter((g) => g.tags.length > 0)
 
   const costBase = formatCostRange(r.cost_min, r.cost_max)
   const priceLabel = costBase ? `${costBase} / 人` : null
@@ -372,11 +388,17 @@ function RestaurantCard({
         )}
 
         {/* Tags */}
-        {displayTags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
-            {displayTags.map((t) => (
-              <TagBadge key={t.id} name={t.name} type={t.type} />
-            ))}
+        {tagGroups.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7, alignItems: 'center' }}>
+            {tagGroups.flatMap(({ type, label, tags }, i) => [
+              ...(i > 0 ? [
+                <span key={`sep-${type}`} style={{ fontSize: 12, color: 'var(--fm-ink-4)', lineHeight: 1 }}>·</span>
+              ] : []),
+              <span key={`label-${type}`} style={{ fontSize: 10, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-4)' }}>
+                {label}
+              </span>,
+              ...tags.map((t) => <TagBadge key={t.id} name={t.name} type={t.type} />),
+            ])}
           </div>
         )}
 
