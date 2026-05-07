@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, requireOwner } from '@/lib/supabase/server'
 import { getPlanningArea } from '@/lib/onemap'
+import { filterByTagType, parseEWKBPoint } from '@/lib/filter'
 import type { Restaurant, TagType } from '@/lib/types'
 
 interface DbTag {
@@ -28,34 +29,6 @@ interface DbRestaurantRow {
   created_at: string
   updated_at: string
   restaurant_tags: Array<{ tags: DbTag | null }>
-}
-
-function filterByTagType(results: Restaurant[], names: string[], type: string): Restaurant[] {
-  if (names.length === 0) return results
-  return results.filter((r) =>
-    names.some((name) => r.tags.some((t) => t.name === name && t.type === type))
-  )
-}
-
-// EWKB binary layout constants
-const EWKB_LITTLE_ENDIAN = 1
-const EWKB_SRID_FLAG = 0x20000000
-const EWKB_BASE_OFFSET = 5   // 1 byte (byte order) + 4 bytes (type)
-const EWKB_SRID_OFFSET = 9   // EWKB_BASE_OFFSET + 4 bytes (SRID)
-const EWKB_DOUBLE_SIZE = 8
-
-function parseEWKBPoint(hex: string): [number, number] | null {
-  try {
-    const buf = Buffer.from(hex, 'hex')
-    const le = buf[0] === EWKB_LITTLE_ENDIAN
-    const wkbType = le ? buf.readUInt32LE(1) : buf.readUInt32BE(1)
-    const offset = (wkbType & EWKB_SRID_FLAG) !== 0 ? EWKB_SRID_OFFSET : EWKB_BASE_OFFSET
-    const x = le ? buf.readDoubleLE(offset) : buf.readDoubleBE(offset)
-    const y = le ? buf.readDoubleLE(offset + EWKB_DOUBLE_SIZE) : buf.readDoubleBE(offset + EWKB_DOUBLE_SIZE)
-    return [x, y]
-  } catch {
-    return null
-  }
 }
 
 export async function GET(request: NextRequest) {

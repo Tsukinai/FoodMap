@@ -72,6 +72,7 @@ interface Props {
   onAddingPinChange: (v: boolean) => void
   onRestaurantSaved: () => void
   editMode: boolean
+  highlightedIds?: string[] | null
 }
 
 export default function MapContainer({
@@ -82,6 +83,7 @@ export default function MapContainer({
   onAddingPinChange,
   onRestaurantSaved,
   editMode,
+  highlightedIds,
 }: Props) {
   const mapRef = useRef<MapRef>(null)
   const [addPinCoords, setAddPinCoords] = useState<{ lng: number; lat: number } | null>(null)
@@ -98,7 +100,39 @@ export default function MapContainer({
     }
   }, [addingPin, onAddingPinChange])
 
-  const groupInfo = useMemo(() => computeGroupInfo(restaurants, spiderfiedKey), [restaurants, spiderfiedKey])
+  // Fly/fit to highlighted restaurants when AI returns matches
+  useEffect(() => {
+    if (!highlightedIds || highlightedIds.length === 0) return
+    const map = mapRef.current
+    if (!map) return
+    const targets = restaurants.filter(r => highlightedIds.includes(r.id))
+    if (targets.length === 0) return
+
+    if (targets.length === 1) {
+      map.flyTo({ center: [targets[0].location_lng, targets[0].location_lat], zoom: 15, duration: 900 })
+      return
+    }
+
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity
+    for (const r of targets) {
+      if (r.location_lng < minLng) minLng = r.location_lng
+      if (r.location_lng > maxLng) maxLng = r.location_lng
+      if (r.location_lat < minLat) minLat = r.location_lat
+      if (r.location_lat > maxLat) maxLat = r.location_lat
+    }
+    map.fitBounds(
+      [[minLng, minLat], [maxLng, maxLat]],
+      { padding: 80, maxZoom: 15, duration: 900 }
+    )
+  }, [highlightedIds, restaurants])
+
+  const visibleRestaurants = useMemo(() => (
+    highlightedIds && highlightedIds.length > 0
+      ? restaurants.filter(r => highlightedIds.includes(r.id))
+      : restaurants
+  ), [restaurants, highlightedIds])
+
+  const groupInfo = useMemo(() => computeGroupInfo(visibleRestaurants, spiderfiedKey), [visibleRestaurants, spiderfiedKey])
 
   function handlePinClick(r: Restaurant) {
     const { groupKey, groupSize } = groupInfo[r.id]
@@ -177,7 +211,7 @@ export default function MapContainer({
           </Marker>
         )}
 
-        {restaurants.map((r) => {
+        {visibleRestaurants.map((r) => {
           const { groupSize, groupKey, pixelOffset } = groupInfo[r.id]
           const isExpanded = spiderfiedKey === groupKey
           return (

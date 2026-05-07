@@ -6,6 +6,20 @@
   75%, 100% { transform: scale(2); opacity: 0; }
 }
 
+@keyframes fm-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fm-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fm-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
 .locate-tooltip { opacity: 0; transition: opacity 0.15s; }
 button:hover .locate-tooltip { opacity: 1; }
 
