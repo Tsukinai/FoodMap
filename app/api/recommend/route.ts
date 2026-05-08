@@ -2,8 +2,14 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { llm, LLM_MODEL } from '@/lib/llm'
 import { searchOneMap } from '@/lib/onemap'
-import { filterByTagType, parseEWKBPoint, haversineKm } from '@/lib/filter'
-import type { Restaurant, Tag } from '@/lib/types'
+import {
+  filterByTagType,
+  parseEWKBPoint,
+  haversineKm,
+  partitionKnownTagNames,
+  expandCuisineTagNames,
+} from '@/lib/filter'
+import type { Restaurant, Tag, TagType } from '@/lib/types'
 
 interface DbTag {
   id: string; name: string; type: string; parent_id: string | null; sort_order: number; created_at: string
@@ -187,10 +193,28 @@ export async function POST(req: NextRequest) {
         const areaMap = new Map(availableAreas.map(a => [a.toLowerCase(), a]))
         const normalizeArea = (s: string) => areaMap.get(s.toLowerCase().trim())
 
-        const cuisine_tags: string[] = args.cuisine_tags ?? []
-        const dish_tags: string[]    = args.dish_tags ?? []
-        const taste_tags: string[]   = args.taste_tags ?? []
-        const scene_tags: string[]   = args.scene_tags ?? []
+        // Drop unknown tag names (LLM hallucinations) so they don't silently
+        // zero-out results. Expand cuisine parent → children since tag match is
+        // exact-name: "中餐" must also pull in 粤菜/川菜/...
+        const validate = (raw: unknown, type: TagType) =>
+          partitionKnownTagNames(Array.isArray(raw) ? raw : [], type, allTags)
+        const cuisine_v = validate(args.cuisine_tags, 'cuisine')
+        const dish_v    = validate(args.dish_tags,    'dish')
+        const taste_v   = validate(args.taste_tags,   'taste')
+        const scene_v   = validate(args.scene_tags,   'scene')
+
+        const droppedTags = [
+          ...cuisine_v.dropped, ...dish_v.dropped,
+          ...taste_v.dropped, ...scene_v.dropped,
+        ]
+        if (droppedTags.length > 0) {
+          console.warn('[recommend] dropped unknown tags:', droppedTags)
+        }
+
+        const cuisine_tags: string[] = expandCuisineTagNames(cuisine_v.kept, allTags)
+        const dish_tags: string[]    = dish_v.kept
+        const taste_tags: string[]   = taste_v.kept
+        const scene_tags: string[]   = scene_v.kept
         const ratings: string[]      = args.ratings ?? []
         const areas: string[] = (args.areas ?? [])
           .map((a: string) => normalizeArea(a))
