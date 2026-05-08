@@ -197,6 +197,21 @@ export async function POST(req: NextRequest) {
             ? (rawArgs ? JSON.parse(rawArgs) : {})
             : (rawArgs && typeof rawArgs === 'object' ? rawArgs : {})
 
+        // Guard: model skipped the tool call → off-topic input (not a food search).
+        if (!intentBody?.message?.tool_calls?.length) {
+          const totalMs = Date.now() - requestStart
+          console.log(JSON.stringify({
+            evt: 'recommend', ts: new Date().toISOString(), model,
+            query: lastUserMessage, outcome: 'off_topic',
+            timing: { stage_a_ms: stageAMs, total_ms: totalMs },
+          }))
+          send({ type: 'meta', restaurant_ids: [], filter: { cuisine_tags: [], dish_tags: [], taste_tags: [], scene_tags: [], location: null, max_cost: null, min_cost: null, status: null, ratings: [] } })
+          send({ type: 'stage', stage: 'writing' })
+          send({ type: 'delta', content: '我只能帮你在食迹里找餐馆，其他问题帮不上。有什么想吃的？' })
+          send({ type: 'done', timing: { stage_a_ms: stageAMs, total_ms: totalMs, outcome: 'off_topic' } })
+          return
+        }
+
         // Drop unknown tag names (LLM hallucinations) so they don't silently
         // zero-out results. Expand cuisine parent → children since tag match is
         // exact-name: "中餐" must also pull in 粤菜/川菜/...
