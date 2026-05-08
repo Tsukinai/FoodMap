@@ -15,12 +15,23 @@ interface GoldenEntry {
   notes?: string
 }
 
+interface Timing {
+  stage_a_ms: number
+  resolve_ms: number
+  stage_b_ms?: number
+  stage_c_ttft_ms?: number | null
+  stage_c_total_ms?: number
+  total_ms: number
+}
+
 interface RunResult {
   query: string
   expected: string[]
   matched: string[]
   recall: number
   hits: number
+  timing: Timing | null
+  outcome: string | null
 }
 
 const BASE_URL = process.env.RECOMMEND_EVAL_URL ?? 'http://localhost:3001'
@@ -33,7 +44,7 @@ if (!COOKIE) {
 const goldenPath = path.join(process.cwd(), 'tests/recommend-golden.json')
 const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf-8')) as GoldenEntry[]
 
-async function runOne(query: string): Promise<string[]> {
+async function runOne(query: string): Promise<{ matched: string[]; timing: Timing | null; outcome: string | null }> {
   const res = await fetch(`${BASE_URL}/api/recommend`, {
     method: 'POST',
     headers: {
@@ -48,6 +59,8 @@ async function runOne(query: string): Promise<string[]> {
   const decoder = new TextDecoder()
   let buf = ''
   let matched: string[] = []
+  let timing: Timing | null = null
+  let outcome: string | null = null
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
@@ -59,32 +72,37 @@ async function runOne(query: string): Promise<string[]> {
       try {
         const data = JSON.parse(line.slice(6))
         if (data.type === 'meta') matched = data.restaurant_ids ?? []
-        if (data.type === 'done') return matched
+        if (data.type === 'done') {
+          timing = data.timing ?? null
+          outcome = data.outcome ?? null
+          return { matched, timing, outcome }
+        }
       } catch { /* ignore malformed */ }
     }
   }
-  return matched
+  return { matched, timing, outcome }
 }
 
 const results: RunResult[] = []
 for (const entry of golden) {
   process.stdout.write(`▸ ${entry.query} ... `)
-  const t0 = Date.now()
   try {
-    const matched = await runOne(entry.query)
+    const { matched, timing, outcome } = await runOne(entry.query)
     const expectedSet = new Set(entry.expected_ids)
     const hits = matched.filter(id => expectedSet.has(id)).length
     const recall = entry.expected_ids.length > 0 ? hits / entry.expected_ids.length : NaN
-    results.push({ query: entry.query, expected: entry.expected_ids, matched, recall, hits })
-    const ms = Date.now() - t0
+    results.push({ query: entry.query, expected: entry.expected_ids, matched, recall, hits, timing, outcome })
+    const t = timing
+      ? ` [a=${timing.stage_a_ms} r=${timing.resolve_ms} b=${timing.stage_b_ms ?? '-'} ttft=${timing.stage_c_ttft_ms ?? '-'} c=${timing.stage_c_total_ms ?? '-'} tot=${timing.total_ms}]`
+      : ''
     if (entry.expected_ids.length === 0) {
-      console.log(`(无期望) matched=${matched.length} ${ms}ms`)
+      console.log(`(无期望) matched=${matched.length}${t}`)
     } else {
-      console.log(`recall=${recall.toFixed(2)} (${hits}/${entry.expected_ids.length}) ${ms}ms`)
+      console.log(`recall=${recall.toFixed(2)} (${hits}/${entry.expected_ids.length})${t}`)
     }
   } catch (e) {
     console.log(`ERROR: ${e instanceof Error ? e.message : e}`)
-    results.push({ query: entry.query, expected: entry.expected_ids, matched: [], recall: 0, hits: 0 })
+    results.push({ query: entry.query, expected: entry.expected_ids, matched: [], recall: 0, hits: 0, timing: null, outcome: null })
   }
 }
 
@@ -97,5 +115,28 @@ if (scored.length > 0) {
   console.log(`平均 recall@8: ${avg.toFixed(3)}`)
   console.log(`零召回: ${zero}/${scored.length}`)
 } else {
-  console.log('\n（golden set 都没填 expected_ids，先去 tests/recommend-golden.json 填上真实餐馆 id）')
+  console.log('\n──────────────')
+  console.log(`总 query: ${results.length}（golden set 没填 expected_ids，跳过 recall）`)
+}
+
+// ─── timing summary ──────────────────────────────────────────────────────────
+const timed = results.filter((r): r is RunResult & { timing: Timing } => r.timing !== null)
+if (timed.length > 0) {
+  const pct = (xs: number[], p: number) => {
+    const sorted = [...xs].sort((a, b) => a - b)
+    const i = Math.min(sorted.length - 1, Math.floor(sorted.length * p))
+    return sorted[i]
+  }
+  const stat = (label: string, vals: number[]) => {
+    if (vals.length === 0) return
+    const avg = Math.round(vals.reduce((s, v) => s + v, 0) / vals.length)
+    console.log(`  ${label.padEnd(18)} avg=${avg.toString().padStart(5)}  p50=${pct(vals, 0.5).toString().padStart(5)}  p90=${pct(vals, 0.9).toString().padStart(5)}  max=${Math.max(...vals).toString().padStart(5)}  ms`)
+  }
+  console.log('\n时间分布 (n=' + timed.length + ')：')
+  stat('stage_a (LLM tool)', timed.map(r => r.timing.stage_a_ms))
+  stat('resolve (geo)',      timed.map(r => r.timing.resolve_ms))
+  stat('stage_b (db+rank)',  timed.map(r => r.timing.stage_b_ms ?? 0).filter(v => v > 0))
+  stat('stage_c TTFT',       timed.map(r => r.timing.stage_c_ttft_ms ?? 0).filter(v => v > 0))
+  stat('stage_c total',      timed.map(r => r.timing.stage_c_total_ms ?? 0).filter(v => v > 0))
+  stat('total',              timed.map(r => r.timing.total_ms))
 }

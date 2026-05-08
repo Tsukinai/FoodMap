@@ -2,16 +2,36 @@
   {
     "query": "Clementi 附近想吃中餐",
     "expected_ids": [],
-    "notes": "填入实际数据库里 Clementi 区域的中餐店 id"
+    "notes": "planning area exact match → areas filter"
   },
   {
     "query": "便宜的辣的，还没去过",
     "expected_ids": [],
-    "notes": "max_cost ≤ 25 + taste 含 '特辣' + status='want' 的店"
+    "notes": "max_cost ≤ 25 + taste 含 '特辣' + status='want'，无地理"
   },
   {
     "query": "想吃日料，预算 30 以内",
     "expected_ids": [],
-    "notes": "cuisine='日料' + cost_max ≤ 30"
+    "notes": "cuisine='日料' + cost_max ≤ 30，无地理"
+  },
+  {
+    "query": "中部找点吃的",
+    "expected_ids": [],
+    "notes": "region keyword → 展开为多个 planning area"
+  },
+  {
+    "query": "Vivocity 附近随便吃",
+    "expected_ids": [],
+    "notes": "landmark → OneMap geocode + 2km radius"
+  },
+  {
+    "query": "Holland Village 附近想吃西餐",
+    "expected_ids": [],
+    "notes": "non-planning-area neighborhood → OneMap geocode（之前会被静默丢弃）"
+  },
+  {
+    "query": "牛车水有什么好吃的",
+    "expected_ids": [],
+    "notes": "Chinese landmark name → OneMap should resolve"
   }
 ]

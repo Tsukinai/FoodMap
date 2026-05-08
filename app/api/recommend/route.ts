@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { llm, LLM_MODEL } from '@/lib/llm'
+import { LLM_MODEL } from '@/lib/llm'
 import {
   filterByTagType,
   parseEWKBPoint,
@@ -137,40 +137,64 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const send = (data: object) => controller.enqueue(sseChunk(data))
 
+      const requestStart = Date.now()
+      let stageAMs = 0
+      let resolveMs = 0
+      let stageBMs = 0
+      let stageCTtftMs: number | null = null
+      let stageCTotalMs = 0
+
       try {
         // ── Stage A: intent understanding ──
         send({ type: 'stage', stage: 'understanding' })
 
         const stageAStart = Date.now()
-        let intentResult
+        // Use Ollama native /api/chat — OpenAI-compat `/v1/chat/completions`
+        // drops the `think: false` flag, which left Qwen3 in reasoning mode and
+        // ballooned Stage A to ~10s even for empty input. Native API honors
+        // `think: false`, the same flag Stage C already relies on.
+        const ollamaBase = process.env.OLLAMA_PROXY_URL ?? ''
+        const ollamaKey = process.env.OLLAMA_API_KEY
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let intentBody: any
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          intentResult = await (llm.chat.completions.create as any)({
-            model: LLM_MODEL,
-            messages: [
-              { role: 'system', content: buildSystemPrompt(allTags) },
-              ...messages.map((m: { role: string; content: string }) => ({
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-              })),
-            ],
-            tools: [SEARCH_TOOL],
-            tool_choice: { type: 'function', function: { name: 'search_restaurants' } },
-            stream: false,
-            max_tokens: 256,
-            temperature: 0.2,
-            think: false,
+          const res = await fetch(`${ollamaBase}/api/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(ollamaKey ? { Authorization: `Bearer ${ollamaKey}` } : {}),
+            },
+            body: JSON.stringify({
+              model: LLM_MODEL,
+              messages: [
+                { role: 'system', content: buildSystemPrompt(allTags) },
+                ...messages.map((m: { role: string; content: string }) => ({
+                  role: m.role,
+                  content: m.content,
+                })),
+              ],
+              tools: [SEARCH_TOOL],
+              stream: false,
+              think: false,
+              options: { temperature: 0.2, num_predict: 256 },
+            }),
           })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          intentBody = await res.json()
         } catch {
           send({ type: 'error', message: 'LLM 服务不可达，请检查网络或本地 Ollama 状态' })
           send({ type: 'done' })
           return
         }
-        const stageAMs = Date.now() - stageAStart
+        stageAMs = Date.now() - stageAStart
 
-        const rawToolCall = intentResult.choices[0]?.message?.tool_calls?.[0]
-        const toolCall = rawToolCall?.type === 'function' ? rawToolCall : undefined
-        const args = toolCall ? JSON.parse(toolCall.function.arguments) : {}
+        // Ollama native returns `arguments` as an object; OpenAI compat returns
+        // a JSON string. Handle both so this code survives a backend swap.
+        const rawArgs = intentBody?.message?.tool_calls?.[0]?.function?.arguments
+        const args =
+          typeof rawArgs === 'string'
+            ? (rawArgs ? JSON.parse(rawArgs) : {})
+            : (rawArgs && typeof rawArgs === 'object' ? rawArgs : {})
 
         // Drop unknown tag names (LLM hallucinations) so they don't silently
         // zero-out results. Expand cuisine parent → children since tag match is
@@ -203,9 +227,11 @@ export async function POST(req: NextRequest) {
         // split, which silently dropped non-planning-area neighborhood names.
         let resolved: ResolvedLocation | null = null
         if (typeof location_query === 'string' && location_query.trim()) {
+          const resolveStart = Date.now()
           resolved = await resolveLocation(location_query, availableAreas, {
             radiusHint: radius_km_hint,
           })
+          resolveMs = Date.now() - resolveStart
         }
 
         // No constraint at all — either the LLM dropped the tool call (rare now
@@ -220,6 +246,7 @@ export async function POST(req: NextRequest) {
           status != null
 
         if (!hasAnyConstraint) {
+          const totalMs = Date.now() - requestStart
           console.log(JSON.stringify({
             evt: 'recommend',
             ts: new Date().toISOString(),
@@ -228,7 +255,7 @@ export async function POST(req: NextRequest) {
             normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, max_cost, min_cost, status, ratings, location_query, resolved, radius_km_hint },
             dropped_tags: droppedTags,
             outcome: 'clarify',
-            stage_a_ms: stageAMs,
+            timing: { stage_a_ms: stageAMs, resolve_ms: resolveMs, total_ms: totalMs },
           }))
           send({
             type: 'meta',
@@ -247,12 +274,16 @@ export async function POST(req: NextRequest) {
             type: 'delta',
             content: '想吃什么？给我一个方向就行——菜系（中餐/日料/西餐…）、区域（Clementi/Orchard…）、预算或口味，任选一个。',
           })
-          send({ type: 'done' })
+          send({
+            type: 'done',
+            timing: { stage_a_ms: stageAMs, resolve_ms: resolveMs, total_ms: totalMs, outcome: 'clarify' },
+          })
           return
         }
 
         // ── Stage B: query and filter ──
         send({ type: 'stage', stage: 'searching' })
+        const stageBStart = Date.now()
 
         let query = supabase
           .from('restaurants')
@@ -339,19 +370,7 @@ export async function POST(req: NextRequest) {
         })
 
         const matched = results.slice(0, 8)
-
-        console.log(JSON.stringify({
-          evt: 'recommend',
-          ts: new Date().toISOString(),
-          query: lastUserMessage,
-          raw_args: args,
-          normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, max_cost, min_cost, status, ratings, location_query, resolved, radius_km_hint },
-          dropped_tags: droppedTags,
-          candidate_count: results.length,
-          matched_ids: matched.map(r => r.id),
-          outcome: matched.length > 0 ? 'matched' : 'no_match',
-          stage_a_ms: stageAMs,
-        }))
+        stageBMs = Date.now() - stageBStart
 
         send({
           type: 'meta',
@@ -432,6 +451,7 @@ ${restaurantCtx}`
 用一句话告诉用户没匹配，然后从上面的筛选条件里挑一个最可能是瓶颈的维度（区域太冷？预算太紧？菜系太具体？）给出一条具体的放宽建议——直接说"把 X 改成 Y" 或 "去掉 X 限制"，不要泛泛的"换个菜系"。不要废话，不要列表。`
 
         let received = 0
+        const stageCStart = Date.now()
         try {
           // Use Ollama native /api/chat — `/v1/chat/completions` (OpenAI compat) drops
           // unknown fields like `think`, so the model keeps reasoning. Native API
@@ -479,16 +499,17 @@ ${restaurantCtx}`
                 const json = JSON.parse(trimmed)
                 const piece: string = json.message?.content ?? ''
                 if (piece) {
+                  if (stageCTtftMs === null) stageCTtftMs = Date.now() - stageCStart
                   received += piece.length
                   send({ type: 'delta', content: piece })
                 }
               } catch { /* skip malformed line */ }
             }
           }
-          console.log('[recommend] stream finished, received chars:', received)
         } catch (err) {
           console.error('[recommend] stream error:', err)
         }
+        stageCTotalMs = Date.now() - stageCStart
 
         // Last-resort fallback if Ollama returned nothing usable.
         if (received === 0) {
@@ -501,7 +522,31 @@ ${restaurantCtx}`
           send({ type: 'delta', content: fallback })
         }
 
-        send({ type: 'done' })
+        const totalMs = Date.now() - requestStart
+        const outcome = matched.length > 0 ? 'matched' : 'no_match'
+        const timing = {
+          stage_a_ms: stageAMs,
+          resolve_ms: resolveMs,
+          stage_b_ms: stageBMs,
+          stage_c_ttft_ms: stageCTtftMs,
+          stage_c_total_ms: stageCTotalMs,
+          total_ms: totalMs,
+        }
+        console.log(JSON.stringify({
+          evt: 'recommend',
+          ts: new Date().toISOString(),
+          query: lastUserMessage,
+          raw_args: args,
+          normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, max_cost, min_cost, status, ratings, location_query, resolved, radius_km_hint },
+          dropped_tags: droppedTags,
+          candidate_count: results.length,
+          matched_ids: matched.map(r => r.id),
+          received_chars: received,
+          outcome,
+          timing,
+        }))
+
+        send({ type: 'done', timing, outcome })
       } finally {
         controller.close()
       }
