@@ -1,0 +1,17 @@
+[
+  {
+    "query": "Clementi 附近想吃中餐",
+    "expected_ids": [],
+    "notes": "填入实际数据库里 Clementi 区域的中餐店 id"
+  },
+  {
+    "query": "便宜的辣的，还没去过",
+    "expected_ids": [],
+    "notes": "max_cost ≤ 25 + taste 含 '特辣' + status='want' 的店"
+  },
+  {
+    "query": "想吃日料，预算 30 以内",
+    "expected_ids": [],
+    "notes": "cuisine='日料' + cost_max ≤ 30"
+  }
+]

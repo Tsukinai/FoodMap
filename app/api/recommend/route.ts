@@ -137,6 +137,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { messages } = await req.json()
+  const lastUserMessage: string | null =
+    [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content ?? null
 
   const { data: tagsData } = await supabase.from('tags').select('*').order('sort_order')
   const allTags: Tag[] = (tagsData ?? []) as Tag[]
@@ -159,6 +161,7 @@ export async function POST(req: NextRequest) {
         // ── Stage A: intent understanding ──
         send({ type: 'stage', stage: 'understanding' })
 
+        const stageAStart = Date.now()
         let intentResult
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,9 +175,9 @@ export async function POST(req: NextRequest) {
               })),
             ],
             tools: [SEARCH_TOOL],
-            tool_choice: 'auto',
+            tool_choice: { type: 'function', function: { name: 'search_restaurants' } },
             stream: false,
-            max_tokens: 1024,
+            max_tokens: 256,
             temperature: 0.2,
             think: false,
           })
@@ -183,11 +186,11 @@ export async function POST(req: NextRequest) {
           send({ type: 'done' })
           return
         }
+        const stageAMs = Date.now() - stageAStart
 
         const rawToolCall = intentResult.choices[0]?.message?.tool_calls?.[0]
         const toolCall = rawToolCall?.type === 'function' ? rawToolCall : undefined
         const args = toolCall ? JSON.parse(toolCall.function.arguments) : {}
-        console.log('[recommend] intent args:', JSON.stringify(args))
 
         // Case-insensitive match against available planning areas
         const areaMap = new Map(availableAreas.map(a => [a.toLowerCase(), a]))
@@ -207,9 +210,6 @@ export async function POST(req: NextRequest) {
           ...cuisine_v.dropped, ...dish_v.dropped,
           ...taste_v.dropped, ...scene_v.dropped,
         ]
-        if (droppedTags.length > 0) {
-          console.warn('[recommend] dropped unknown tags:', droppedTags)
-        }
 
         const cuisine_tags: string[] = expandCuisineTagNames(cuisine_v.kept, allTags)
         const dish_tags: string[]    = dish_v.kept
@@ -224,6 +224,48 @@ export async function POST(req: NextRequest) {
         const status: string | undefined   = args.status
         const near_location: string | undefined = args.near_location
         const radius_km: number | undefined     = args.radius_km
+
+        // No constraint at all — either the LLM dropped the tool call (rare now
+        // that tool_choice is forced) or every extracted field was empty/dropped.
+        // Returning the DB's first 8 rows here would be noise; ask the user to
+        // pick a dimension instead.
+        const hasAnyConstraint =
+          cuisine_tags.length > 0 || dish_tags.length > 0 ||
+          taste_tags.length > 0   || scene_tags.length > 0 ||
+          ratings.length > 0      || areas.length > 0 ||
+          max_cost != null || min_cost != null ||
+          status != null || near_location != null
+
+        if (!hasAnyConstraint) {
+          console.log(JSON.stringify({
+            evt: 'recommend',
+            ts: new Date().toISOString(),
+            query: lastUserMessage,
+            raw_args: args,
+            normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, areas, max_cost, min_cost, status, ratings, near_location, radius_km },
+            dropped_tags: droppedTags,
+            outcome: 'clarify',
+            stage_a_ms: stageAMs,
+          }))
+          send({
+            type: 'meta',
+            restaurant_ids: [],
+            filter: {
+              cuisine_tags, dish_tags, taste_tags, scene_tags, areas,
+              max_cost: max_cost ?? null,
+              min_cost: min_cost ?? null,
+              status: status ?? null,
+              ratings,
+            },
+          })
+          send({ type: 'stage', stage: 'writing' })
+          send({
+            type: 'delta',
+            content: '想吃什么？给我一个方向就行——菜系（中餐/日料/西餐…）、区域（Clementi/Orchard…）、预算或口味，任选一个。',
+          })
+          send({ type: 'done' })
+          return
+        }
 
         // ── Stage B: query and filter ──
         send({ type: 'stage', stage: 'searching' })
@@ -260,14 +302,18 @@ export async function POST(req: NextRequest) {
           }
         })
 
+        let refLat: number | null = null
+        let refLng: number | null = null
+        let activeRadius: number | null = null
+
         if (near_location) {
           const geo = await searchOneMap(near_location)
           if (geo.length > 0) {
-            const refLng = parseFloat(geo[0].LONGITUDE)
-            const refLat = parseFloat(geo[0].LATITUDE)
-            const radius = radius_km ?? 2
+            refLng = parseFloat(geo[0].LONGITUDE)
+            refLat = parseFloat(geo[0].LATITUDE)
+            activeRadius = radius_km ?? 2
             results = results.filter(r =>
-              haversineKm(refLat, refLng, r.location_lat, r.location_lng) <= radius
+              haversineKm(refLat!, refLng!, r.location_lat, r.location_lng) <= activeRadius!
             )
           }
         }
@@ -281,7 +327,50 @@ export async function POST(req: NextRequest) {
           results = results.filter(r => ratings.includes(r.rating))
         }
 
+        // Rank: rating × 3 (dominant) + number of tag-type hits + proximity
+        // score (only when near_location), tie-break by created_at desc. Without
+        // this, slice(0, 8) was returning whatever order Supabase emitted.
+        const RATING_SCORE: Record<string, number> = {
+          '夯': 5, '顶级': 4, '人上人': 3, 'NPC': 2, '拉完了': 1, '未评分': 0,
+        }
+        const tagHitTypes = (r: Restaurant) => {
+          let n = 0
+          if (cuisine_tags.length && cuisine_tags.some(name => r.tags.some(t => t.name === name && t.type === 'cuisine'))) n++
+          if (dish_tags.length    && dish_tags.some(name    => r.tags.some(t => t.name === name && t.type === 'dish')))    n++
+          if (taste_tags.length   && taste_tags.some(name   => r.tags.some(t => t.name === name && t.type === 'taste')))   n++
+          if (scene_tags.length   && scene_tags.some(name   => r.tags.some(t => t.name === name && t.type === 'scene')))   n++
+          return n
+        }
+        const score = (r: Restaurant) => {
+          const ratingPart = (RATING_SCORE[r.rating] ?? 0) * 3
+          const tagPart = tagHitTypes(r)
+          let distPart = 0
+          if (refLat !== null && refLng !== null && activeRadius !== null) {
+            const d = haversineKm(refLat, refLng, r.location_lat, r.location_lng)
+            distPart = Math.max(0, (activeRadius - d) / activeRadius)
+          }
+          return ratingPart + tagPart + distPart
+        }
+        results.sort((a, b) => {
+          const diff = score(b) - score(a)
+          if (diff !== 0) return diff
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        })
+
         const matched = results.slice(0, 8)
+
+        console.log(JSON.stringify({
+          evt: 'recommend',
+          ts: new Date().toISOString(),
+          query: lastUserMessage,
+          raw_args: args,
+          normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, areas, max_cost, min_cost, status, ratings, near_location, radius_km },
+          dropped_tags: droppedTags,
+          candidate_count: results.length,
+          matched_ids: matched.map(r => r.id),
+          outcome: matched.length > 0 ? 'matched' : 'no_match',
+          stage_a_ms: stageAMs,
+        }))
 
         send({
           type: 'meta',
@@ -308,10 +397,30 @@ export async function POST(req: NextRequest) {
           return `${i + 1}. ${r.name}（${tags}）${cost}${rating}${area}${dishes}${note}`
         }).join('\n')
 
+        const filterSummary = (() => {
+          const parts: string[] = []
+          if (cuisine_tags.length) parts.push(`菜系=${cuisine_tags.join('/')}`)
+          if (dish_tags.length)    parts.push(`菜品=${dish_tags.join('/')}`)
+          if (taste_tags.length)   parts.push(`口味=${taste_tags.join('/')}`)
+          if (scene_tags.length)   parts.push(`场景=${scene_tags.join('/')}`)
+          if (areas.length)        parts.push(`区域=${areas.join('/')}`)
+          if (near_location)       parts.push(`地点=${near_location} 附近 ${activeRadius ?? radius_km ?? 2}km`)
+          if (min_cost != null && max_cost != null) parts.push(`预算 ${min_cost}–${max_cost} SGD`)
+          else if (max_cost != null) parts.push(`预算 ≤${max_cost} SGD`)
+          else if (min_cost != null) parts.push(`预算 ≥${min_cost} SGD`)
+          if (status === 'want')    parts.push('仅未去过')
+          if (status === 'visited') parts.push('仅已去过')
+          if (ratings.length)       parts.push(`评分=${ratings.join('/')}`)
+          return parts.length === 0 ? '（用户没指定具体条件）' : parts.join('，')
+        })()
+
         const recommendSystem = matched.length > 0
           ? `/no_think
 你刚帮用户在他自己的新加坡美食地图里筛出了 ${matched.length} 家餐馆，下面是这些餐馆的资料。
 用 2-3 句自然中文回应用户的需求，写成对话语气。
+
+用户筛选条件：${filterSummary}
+匹配结果：${matched.length} 家
 
 要求：
 - 不要照抄"我的评价"原文，用自己的话提炼一两个亮点
@@ -324,7 +433,10 @@ export async function POST(req: NextRequest) {
 候选餐馆：
 ${restaurantCtx}`
           : `/no_think
-没有找到符合条件的餐馆。用一句话告诉用户没匹配，并提一个具体的放宽建议（比如"试试附近的 X 区" 或 "换成 Y 菜系"）。不要废话。`
+用户筛选条件：${filterSummary}
+匹配结果：0 家
+
+用一句话告诉用户没匹配，然后从上面的筛选条件里挑一个最可能是瓶颈的维度（区域太冷？预算太紧？菜系太具体？）给出一条具体的放宽建议——直接说"把 X 改成 Y" 或 "去掉 X 限制"，不要泛泛的"换个菜系"。不要废话，不要列表。`
 
         let received = 0
         try {
