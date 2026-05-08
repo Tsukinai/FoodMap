@@ -1,4 +1,4 @@
-import type { Restaurant } from './types'
+import type { Restaurant, Tag, TagType } from './types'
 
 // ─── EWKB parsing ────────────────────────────────────────────────────────────
 
@@ -29,6 +29,43 @@ export function filterByTagType(results: Restaurant[], names: string[], type: st
   return results.filter(r =>
     names.some(name => r.tags.some(t => t.name === name && t.type === type))
   )
+}
+
+// Drop names that are not known cuisine/dish/taste/scene tags. Used on LLM tool
+// output so a hallucinated tag name does not silently zero-out the result set.
+export function partitionKnownTagNames(
+  names: string[],
+  type: TagType,
+  allTags: Tag[],
+): { kept: string[]; dropped: string[] } {
+  const known = new Set(allTags.filter(t => t.type === type).map(t => t.name))
+  const kept: string[] = []
+  const dropped: string[] = []
+  for (const n of names) (known.has(n) ? kept : dropped).push(n)
+  return { kept, dropped }
+}
+
+// Expand parent cuisine names to include all their children (e.g. 中餐 → 中餐 +
+// 粤菜 + 川菜 …). Other tag types have no hierarchy so don't need this.
+export function expandCuisineTagNames(names: string[], allTags: Tag[]): string[] {
+  if (names.length === 0) return names
+  const cuisineByName = new Map(
+    allTags.filter(t => t.type === 'cuisine').map(t => [t.name, t]),
+  )
+  const childrenByParent = new Map<string, string[]>()
+  for (const t of allTags) {
+    if (t.type !== 'cuisine' || !t.parent_id) continue
+    const list = childrenByParent.get(t.parent_id) ?? []
+    list.push(t.name)
+    childrenByParent.set(t.parent_id, list)
+  }
+  const result = new Set(names)
+  for (const name of names) {
+    const tag = cuisineByName.get(name)
+    if (!tag) continue
+    for (const child of childrenByParent.get(tag.id) ?? []) result.add(child)
+  }
+  return Array.from(result)
 }
 
 // ─── Distance ────────────────────────────────────────────────────────────────
