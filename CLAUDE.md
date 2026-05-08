@@ -12,7 +12,7 @@ A personal Singapore food map. Single-owner (Google OAuth). Public read-only. Ow
 - **Google Places API (New)** — restaurant name search in AddPinModal, proxied via `/api/places`
 - **Supabase** — PostgreSQL + PostGIS + Auth + RLS
 - **Google OAuth** — single user login; any authenticated user can post to guestbook, owner can reply/delete
-- **Ollama (Qwen3.6 MoE)** — natural-language recommend chat, called over an authenticated proxy
+- **Ollama (Qwen3 14B Q4_K_M)** — natural-language recommend chat, called over an authenticated proxy
 - **Tailwind CSS v4** + shadcn/ui
 - **PWA** — manifest + service worker (workbox), offline fallback
 

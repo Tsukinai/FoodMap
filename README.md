@@ -12,7 +12,7 @@
 - 餐馆信息：名称、地址（Google Places 搜索 + OneMap 校验）、人均消费、招牌菜、状态（想去 / 已去）、评分（夯 / 顶级 / 人上人 / NPC / 拉完了）、备注、自动归属新加坡 planning area
 - 标签系统：菜系（含子菜系层级）、菜品、口味、场合，跨餐馆复用，支持拖拽排序
 - 多维筛选：状态、菜系（可展开子菜系）、菜品、口味、场合、人均消费、评分、planning area
-- 自然语言推荐：浮动聊天面板，调用本地 Ollama（Qwen3.6）解析意图、查库、流式生成推荐
+- 自然语言推荐：浮动聊天面板，调用本地 Ollama（Qwen3 14B）解析意图、查库、流式生成推荐
 - 地图 / 列表 / 留言板三视图，移动端响应式
 - PWA：可安装到桌面 / 手机，带离线页
 - 留言板：任意 Google 账号登录可留言，本人可回复 / 删除
@@ -25,7 +25,7 @@
 | Framework | Next.js 16 (App Router) + TypeScript   |
 | Map       | MapLibre GL + react-map-gl             |
 | 地址搜索      | Google Places API (New) + OneMap       |
-| LLM       | Ollama + Qwen3.6 MoE（本地，OpenAI 兼容接口）   |
+| LLM       | Ollama + Qwen3 14B Q4_K_M（本地，OpenAI 兼容接口）   |
 | 数据库       | Supabase (PostgreSQL + PostGIS + RLS)  |
 | 认证        | Supabase Auth + Google OAuth           |
 | UI        | Tailwind CSS v4 + shadcn/ui            |
@@ -128,7 +128,7 @@ lib/
 2. 在 Supabase 建项目，按顺序执行 `0001` → `0009` migrations
 3. 在 Supabase 开启 Google OAuth，配置回调 URL
 4. 申请 Google Places API (New) key、注册 OneMap 账号
-5. 想用 LLM 推荐功能：本地跑 Ollama，拉 Qwen3.6 模型，用 Tailscale 暴露给 Vercel
+5. 想用 LLM 推荐功能：本地跑 Ollama，拉 Qwen3 14B 模型，用 Tailscale 暴露给 Vercel
 6. 在 Vercel 部署，填入环境变量
 
 唯一需要改的业务逻辑：把 `NEXT_PUBLIC_OWNER_USER_ID` / `OWNER_USER_ID` 换成你自己的 Supabase user UUID。

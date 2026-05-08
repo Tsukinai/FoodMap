@@ -5,4 +5,4 @@ export const llm = new OpenAI({
   apiKey: process.env.OLLAMA_API_KEY ?? 'ollama',
 })
 
-export const LLM_MODEL = 'qwen3.6:35b-a3b-q8_0'
+export const LLM_MODEL = 'qwen3:14b-q4_K_M'
