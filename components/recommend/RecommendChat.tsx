@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { signIn } from '@/lib/auth'
+import { AVAILABLE_MODELS, DEFAULT_MODEL, type AvailableModelId } from '@/lib/llm'
 import type { User } from '@supabase/supabase-js'
 
 interface ChatMessage {
@@ -10,6 +11,8 @@ interface ChatMessage {
 }
 
 type Stage = 'understanding' | 'searching' | 'writing' | null
+
+const MODEL_STORAGE_KEY = 'fm-recommend-model'
 
 interface Props {
   user: User | null
@@ -30,12 +33,25 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [stage, setStage] = useState<Stage>(null)
+  const [model, setModel] = useState<AvailableModelId>(DEFAULT_MODEL)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (user) inputRef.current?.focus()
   }, [user])
+
+  useEffect(() => {
+    const saved = localStorage.getItem(MODEL_STORAGE_KEY)
+    if (saved && AVAILABLE_MODELS.some(m => m.id === saved)) {
+      setModel(saved as AvailableModelId)
+    }
+  }, [])
+
+  function changeModel(id: AvailableModelId) {
+    setModel(id)
+    localStorage.setItem(MODEL_STORAGE_KEY, id)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -56,7 +72,7 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({ messages: nextMessages, model }),
       })
 
       if (!res.ok || !res.body) throw new Error('request failed')
@@ -116,7 +132,7 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
       setLoading(false)
       setStage(null)
     }
-  }, [input, loading, messages, onHighlight])
+  }, [input, loading, messages, onHighlight, model])
 
   function handleClear() {
     setMessages([])
@@ -174,6 +190,30 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
           </button>
         )}
         <div style={{ flex: 1 }} />
+        <select
+          value={model}
+          onChange={e => changeModel(e.target.value as AvailableModelId)}
+          disabled={loading}
+          title={AVAILABLE_MODELS.find(m => m.id === model)?.label}
+          style={{
+            height: 24, padding: '0 6px', borderRadius: 99,
+            background: 'var(--fm-cream)',
+            border: '1px solid var(--fm-line)',
+            fontSize: 11, fontFamily: 'var(--font-geist-mono)',
+            color: 'var(--fm-ink-2)',
+            cursor: loading ? 'default' : 'pointer',
+            opacity: loading ? 0.4 : 1,
+            outline: 'none',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            paddingRight: 8,
+          }}
+        >
+          {AVAILABLE_MODELS.map(m => (
+            <option key={m.id} value={m.id}>{m.short}</option>
+          ))}
+        </select>
         {messages.length > 0 && (
           <button
             onClick={handleClear}

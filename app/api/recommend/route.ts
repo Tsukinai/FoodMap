@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { LLM_MODEL } from '@/lib/llm'
+import { resolveModel } from '@/lib/llm'
 import {
   filterByTagType,
   parseEWKBPoint,
@@ -113,7 +113,8 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const { messages } = await req.json()
+  const { messages, model: requestedModel } = await req.json()
+  const model = resolveModel(requestedModel)
   const lastUserMessage: string | null =
     [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content ?? null
 
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
               ...(ollamaKey ? { Authorization: `Bearer ${ollamaKey}` } : {}),
             },
             body: JSON.stringify({
-              model: LLM_MODEL,
+              model,
               messages: [
                 { role: 'system', content: buildSystemPrompt(allTags) },
                 ...messages.map((m: { role: string; content: string }) => ({
@@ -250,6 +251,7 @@ export async function POST(req: NextRequest) {
           console.log(JSON.stringify({
             evt: 'recommend',
             ts: new Date().toISOString(),
+            model,
             query: lastUserMessage,
             raw_args: args,
             normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, max_cost, min_cost, status, ratings, location_query, resolved, radius_km_hint },
@@ -465,7 +467,7 @@ ${restaurantCtx}`
               ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
             },
             body: JSON.stringify({
-              model: LLM_MODEL,
+              model,
               messages: [
                 { role: 'system', content: recommendSystem },
                 ...messages.map((m: { role: string; content: string }) => ({
@@ -535,6 +537,7 @@ ${restaurantCtx}`
         console.log(JSON.stringify({
           evt: 'recommend',
           ts: new Date().toISOString(),
+          model,
           query: lastUserMessage,
           raw_args: args,
           normalized: { cuisine_tags, dish_tags, taste_tags, scene_tags, max_cost, min_cost, status, ratings, location_query, resolved, radius_km_hint },

@@ -36,9 +36,13 @@ interface RunResult {
 
 const BASE_URL = process.env.RECOMMEND_EVAL_URL ?? 'http://localhost:3001'
 const COOKIE = process.env.RECOMMEND_EVAL_COOKIE
+const MODEL_OVERRIDE = process.env.RECOMMEND_EVAL_MODEL  // optional model id
 if (!COOKIE) {
   console.error('需要 RECOMMEND_EVAL_COOKIE 环境变量。从浏览器 DevTools 复制登录后的 cookie 字符串。')
   process.exit(1)
+}
+if (MODEL_OVERRIDE) {
+  console.log(`[eval] model override: ${MODEL_OVERRIDE}`)
 }
 
 const goldenPath = path.join(process.cwd(), 'tests/recommend-golden.json')
@@ -51,7 +55,10 @@ async function runOne(query: string): Promise<{ matched: string[]; timing: Timin
       'Content-Type': 'application/json',
       Cookie: COOKIE!,
     },
-    body: JSON.stringify({ messages: [{ role: 'user', content: query }] }),
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: query }],
+      ...(MODEL_OVERRIDE ? { model: MODEL_OVERRIDE } : {}),
+    }),
   })
   if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} ${await res.text().catch(() => '')}`)
 
