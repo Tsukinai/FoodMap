@@ -79,6 +79,19 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', update)
   }, [])
 
+  // restore sidebar state on mobile from localStorage
+  useEffect(() => {
+    if (!isMobile) return
+    const saved = localStorage.getItem('sidebar-open')
+    if (saved !== null) setSidebarOpen(saved === 'true')
+  }, [isMobile])
+
+  // persist sidebar state changes (mobile only)
+  useEffect(() => {
+    if (!isMobile) return
+    localStorage.setItem('sidebar-open', String(sidebarOpen))
+  }, [sidebarOpen, isMobile])
+
   const filtersRef = useRef(filters)
   filtersRef.current = filters
 
