@@ -276,6 +276,10 @@ export default function RestaurantList({ restaurants, loading, isOwner, onSaved 
             setEditRestaurant(null)
             onSaved?.()
           }}
+          onDelete={() => {
+            setEditRestaurant(null)
+            onSaved?.()
+          }}
         />
       )}
     </div>

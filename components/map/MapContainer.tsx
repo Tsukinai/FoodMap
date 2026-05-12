@@ -312,6 +312,10 @@ export default function MapContainer({
             setEditRestaurant(null)
             onRestaurantSaved()
           }}
+          onDelete={() => {
+            setEditRestaurant(null)
+            onRestaurantSaved()
+          }}
         />
       )}
     </div>

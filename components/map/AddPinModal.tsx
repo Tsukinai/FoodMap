@@ -12,9 +12,10 @@ interface Props {
   lat?: number
   onClose: () => void
   onSaved: () => void
+  onDelete?: () => void
 }
 
-export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: Props) {
+export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved, onDelete }: Props) {
   const [name, setName] = useState(restaurant?.name ?? '')
   const [address, setAddress] = useState(restaurant?.address ?? '')
   const [postalCode, setPostalCode] = useState(restaurant?.postal_code ?? '')
@@ -38,6 +39,8 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
   const [rating, setRating] = useState<RestaurantRating>(restaurant?.rating ?? '未评分')
   const [allTags, setAllTags] = useState<Tag[]>([])
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [chainSearchOpen, setChainSearchOpen] = useState(false)
   const [chainQuery, setChainQuery] = useState('')
@@ -129,6 +132,17 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
       onSaved()
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!restaurant) return
+    setDeleting(true)
+    try {
+      await fetch(`/api/restaurants/${restaurant.id}`, { method: 'DELETE' })
+      onDelete?.()
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -600,42 +614,103 @@ export default function AddPinModal({ restaurant, lng, lat, onClose, onSaved }: 
           </FormSection>
 
           {/* Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 8,
-                fontSize: 13.5,
-                fontWeight: 500,
-                border: '1px solid var(--fm-line-2)',
-                background: 'transparent',
-                color: 'var(--fm-ink-2)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-geist-sans)',
-              }}
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !name.trim() || !address.trim() || !status}
-              style={{
-                padding: '10px 18px',
-                borderRadius: 8,
-                fontSize: 13.5,
-                fontWeight: 500,
-                border: '1px solid var(--fm-orange)',
-                background: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
-                borderColor: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
-                color: '#fff',
-                cursor: saving || !name.trim() || !address.trim() || !status ? 'default' : 'pointer',
-                fontFamily: 'var(--font-geist-sans)',
-                boxShadow: '0 4px 10px rgba(217,107,44,0.25)',
-              }}
-            >
-              {saving ? '保存中…' : restaurant ? '保存' : '保存为新钉'}
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            {/* Delete — only in edit mode */}
+            {restaurant && onDelete && (
+              confirmDelete ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-mono)' }}>确认删除？</span>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{
+                      padding: '7px 12px',
+                      borderRadius: 7,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      border: '1px solid #dc2626',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      cursor: deleting ? 'default' : 'pointer',
+                      fontFamily: 'var(--font-geist-sans)',
+                    }}
+                  >
+                    {deleting ? '删除中…' : '确认删除'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    style={{
+                      padding: '7px 12px',
+                      borderRadius: 7,
+                      fontSize: 12.5,
+                      border: '1px solid var(--fm-line-2)',
+                      background: 'transparent',
+                      color: 'var(--fm-ink-3)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-geist-sans)',
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: 7,
+                    fontSize: 12.5,
+                    border: '1px solid var(--fm-line-2)',
+                    background: 'transparent',
+                    color: 'var(--fm-ink-3)',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-geist-sans)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.color = '#dc2626' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--fm-line-2)'; e.currentTarget.style.color = 'var(--fm-ink-3)' }}
+                >
+                  删除地图钉
+                </button>
+              )
+            )}
+            {/* Save / Cancel */}
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  border: '1px solid var(--fm-line-2)',
+                  background: 'transparent',
+                  color: 'var(--fm-ink-2)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-geist-sans)',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || !name.trim() || !address.trim() || !status}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 8,
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  border: '1px solid var(--fm-orange)',
+                  background: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                  borderColor: saving || !name.trim() || !address.trim() || !status ? 'var(--fm-ink-4)' : 'var(--fm-orange)',
+                  color: '#fff',
+                  cursor: saving || !name.trim() || !address.trim() || !status ? 'default' : 'pointer',
+                  fontFamily: 'var(--font-geist-sans)',
+                  boxShadow: '0 4px 10px rgba(217,107,44,0.25)',
+                }}
+              >
+                {saving ? '保存中…' : restaurant ? '保存' : '保存为新钉'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

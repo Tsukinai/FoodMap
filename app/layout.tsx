@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import OwnerDashboardLink from "@/components/OwnerDashboardLink";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,7 +44,10 @@ export default function RootLayout({
       lang="zh"
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <body className="h-full overflow-hidden">{children}</body>
+      <body className="h-full overflow-hidden">
+        {children}
+        <OwnerDashboardLink />
+      </body>
     </html>
   );
 }

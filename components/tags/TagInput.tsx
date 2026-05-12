@@ -243,37 +243,39 @@ export default function TagInput({
         </div>
       )}
 
-      {/* Search / custom input */}
-      <input
-        ref={inputRef}
-        placeholder={`自定义${TYPE_LABELS[type]}…`}
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); setPendingCreate(false) }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            if (pendingCreate) { createTag(); return }
-            if (!exactMatch && search.trim()) setPendingCreate(true)
-            else if (filtered.length === 1) { toggle(filtered[0].id); setSearch('') }
-          }
-        }}
-        style={{
-          width: '100%',
-          background: 'var(--fm-paper)',
-          border: '1px solid var(--fm-line-2)',
-          borderRadius: 8,
-          padding: '8px 12px',
-          fontSize: '1rem',
-          fontFamily: 'var(--font-geist-sans)',
-          color: 'var(--fm-ink)',
-          outline: 'none',
-        }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
-        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
-      />
+      {/* Search / custom input — hidden when user cannot manage tags */}
+      {canManage && (
+        <>
+          <input
+            ref={inputRef}
+            placeholder={`自定义${TYPE_LABELS[type]}…`}
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPendingCreate(false) }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (pendingCreate) { createTag(); return }
+                if (!exactMatch && search.trim()) setPendingCreate(true)
+                else if (filtered.length === 1) { toggle(filtered[0].id); setSearch('') }
+              }
+            }}
+            style={{
+              width: '100%',
+              background: 'var(--fm-paper)',
+              border: '1px solid var(--fm-line-2)',
+              borderRadius: 8,
+              padding: '8px 12px',
+              fontSize: '1rem',
+              fontFamily: 'var(--font-geist-sans)',
+              color: 'var(--fm-ink)',
+              outline: 'none',
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+          />
 
-      {/* Custom tag results */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 80, overflowY: 'auto' }}>
+          {/* Custom tag results */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 80, overflowY: 'auto' }}>
         {filtered.map((t) => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <button
@@ -328,7 +330,7 @@ export default function TagInput({
             )}
           </div>
         ))}
-        {search && !exactMatch && search.trim() && !pendingCreate && (
+        {search && !exactMatch && search.trim() && !pendingCreate && canManage && (
           <button
             onClick={() => setPendingCreate(true)}
             className="fm-tag"
@@ -342,7 +344,7 @@ export default function TagInput({
             {`+ 新建 "${search.trim()}"`}
           </button>
         )}
-        {search && !exactMatch && search.trim() && pendingCreate && (
+        {search && !exactMatch && search.trim() && pendingCreate && canManage && (
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {type === 'dish' && (
               <p style={{ margin: 0, fontSize: 11.5, color: 'var(--fm-ink-3)', lineHeight: 1.5 }}>
@@ -366,7 +368,9 @@ export default function TagInput({
             </div>
           </div>
         )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
