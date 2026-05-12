@@ -58,9 +58,18 @@ function Spinner() {
   )
 }
 
+type StatusFilter = 'all' | 'visited' | 'want'
+
+const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'visited', label: '已吃' },
+  { value: 'want', label: '想去' },
+]
+
 export default function DashboardClient() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [aiSummary, setAiSummary] = useState('')
   const [aiStreaming, setAiStreaming] = useState(false)
   const [aiDone, setAiDone] = useState(false)
@@ -69,9 +78,11 @@ export default function DashboardClient() {
   const [adminLoading, setAdminLoading] = useState(true)
   const [actingId, setActingId] = useState<string | null>(null)
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (filter: StatusFilter) => {
+    setStatsLoading(true)
     try {
-      const res = await fetch('/api/dashboard/stats')
+      const url = filter === 'all' ? '/api/dashboard/stats' : `/api/dashboard/stats?filter=${filter}`
+      const res = await fetch(url)
       const data = await res.json()
       setStats(data)
     } catch {
@@ -99,9 +110,12 @@ export default function DashboardClient() {
   }, [])
 
   useEffect(() => {
-    fetchStats()
+    fetchStats(statusFilter)
+  }, [fetchStats, statusFilter])
+
+  useEffect(() => {
     fetchAdmin()
-  }, [fetchStats, fetchAdmin])
+  }, [fetchAdmin])
 
   const handleAiSummary = useCallback(async () => {
     if (!stats || aiStreaming || aiDone) return
@@ -192,7 +206,7 @@ export default function DashboardClient() {
     : '—'
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--fm-paper)', fontFamily: 'var(--font-geist-sans)' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', background: 'var(--fm-paper)', fontFamily: 'var(--font-geist-sans)' }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       <header style={{
@@ -245,6 +259,27 @@ export default function DashboardClient() {
               <div style={SECTION_LABEL}>{label}</div>
               <div style={{ ...STAT_NUM, color }}>{statsLoading ? '—' : value}</div>
             </div>
+          ))}
+        </div>
+
+        {/* Status filter toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+          <span style={{ fontFamily: 'var(--font-geist-mono)', fontSize: 11, color: 'var(--fm-ink-4)', marginRight: 4 }}>查看分布</span>
+          {STATUS_FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              style={{
+                height: 28, padding: '0 12px', borderRadius: 7,
+                border: `1px solid ${statusFilter === value ? 'var(--fm-orange)' : 'var(--fm-line-2)'}`,
+                background: statusFilter === value ? '#fdf0e6' : 'transparent',
+                color: statusFilter === value ? 'var(--fm-orange-dark)' : 'var(--fm-ink-3)',
+                fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: statusFilter === value ? 600 : 400,
+                cursor: 'pointer', transition: 'all 0.12s',
+              }}
+            >
+              {label}
+            </button>
           ))}
         </div>
 
@@ -334,26 +369,30 @@ export default function DashboardClient() {
             ) : (
               <>
                 <div style={{ fontSize: 11, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', marginBottom: 8 }}>口味</div>
-                {stats?.byTaste.length === 0 ? (
-                  <div style={{ fontSize: 12.5, color: 'var(--fm-ink-4)', marginBottom: 14 }}>暂无</div>
+                {!stats?.byTaste.length ? (
+                  <div style={{ fontSize: 12.5, color: 'var(--fm-ink-4)', marginBottom: 16 }}>暂无</div>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                    {stats?.byTaste.map(({ name, count }) => (
-                      <span key={name} className="fm-chip-taste" style={{ fontSize: 11.5 }}>
-                        {name} <span style={{ opacity: 0.6, fontFamily: 'var(--font-geist-mono)' }}>{count}</span>
-                      </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                    {stats.byTaste.map(({ name, count }) => (
+                      <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 56, fontSize: 12.5, color: 'var(--fm-ink-2)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                        <HBar pct={(count / Math.max(...stats.byTaste.map(t => t.count), 1)) * 100} color="#c8883a" />
+                        <div style={{ width: 22, textAlign: 'right', fontSize: 12, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-3)', flexShrink: 0 }}>{count}</div>
+                      </div>
                     ))}
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: 'var(--fm-ink-4)', fontFamily: 'var(--font-geist-mono)', marginBottom: 8 }}>场合</div>
-                {stats?.byScene.length === 0 ? (
+                {!stats?.byScene.length ? (
                   <div style={{ fontSize: 12.5, color: 'var(--fm-ink-4)' }}>暂无</div>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {stats?.byScene.map(({ name, count }) => (
-                      <span key={name} className="fm-chip-scene" style={{ fontSize: 11.5 }}>
-                        {name} <span style={{ opacity: 0.6, fontFamily: 'var(--font-geist-mono)' }}>{count}</span>
-                      </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {stats.byScene.map(({ name, count }) => (
+                      <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 56, fontSize: 12.5, color: 'var(--fm-ink-2)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                        <HBar pct={(count / Math.max(...stats.byScene.map(s => s.count), 1)) * 100} color="#4a3d6b" />
+                        <div style={{ width: 22, textAlign: 'right', fontSize: 12, fontFamily: 'var(--font-geist-mono)', color: 'var(--fm-ink-3)', flexShrink: 0 }}>{count}</div>
+                      </div>
                     ))}
                   </div>
                 )}

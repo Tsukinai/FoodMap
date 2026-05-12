@@ -295,6 +295,27 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Owner: dashboard link — always visible on desktop */}
+        {isOwner && !isMobile && (
+          <>
+            <div style={{ width: 1, height: 22, background: 'var(--fm-line)', flexShrink: 0 }} />
+            <Link
+              href="/dashboard"
+              style={{
+                height: 32, paddingLeft: 12, paddingRight: 12, borderRadius: 8, flexShrink: 0,
+                border: '1px solid var(--fm-line)',
+                background: 'var(--fm-paper)',
+                color: 'var(--fm-ink-3)',
+                fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
+                textDecoration: 'none',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              仪表盘
+            </Link>
+          </>
+        )}
+
         {/* Owner controls — map mode only */}
         {isOwner && viewMode === 'map' && (
           <>
@@ -334,20 +355,6 @@ export default function HomePage() {
             ) : (
               /* Desktop: text buttons */
               <>
-                <Link
-                  href="/dashboard"
-                  style={{
-                    height: 32, paddingLeft: 12, paddingRight: 12, borderRadius: 8, flexShrink: 0,
-                    border: '1px solid var(--fm-line)',
-                    background: 'var(--fm-paper)',
-                    color: 'var(--fm-ink-3)',
-                    fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
-                    cursor: 'pointer', textDecoration: 'none',
-                    display: 'flex', alignItems: 'center',
-                  }}
-                >
-                  仪表盘
-                </Link>
                 <button
                   onClick={() => setEditMode(v => !v)}
                   style={{
