@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { Restaurant, Tag, FilterPayload } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
@@ -333,6 +334,20 @@ export default function HomePage() {
             ) : (
               /* Desktop: text buttons */
               <>
+                <Link
+                  href="/dashboard"
+                  style={{
+                    height: 32, paddingLeft: 12, paddingRight: 12, borderRadius: 8, flexShrink: 0,
+                    border: '1px solid var(--fm-line)',
+                    background: 'var(--fm-paper)',
+                    color: 'var(--fm-ink-3)',
+                    fontSize: 12.5, fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
+                    cursor: 'pointer', textDecoration: 'none',
+                    display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  仪表盘
+                </Link>
                 <button
                   onClick={() => setEditMode(v => !v)}
                   style={{
@@ -569,6 +584,7 @@ export default function HomePage() {
           <div style={{ width: isMobile ? 'min(360px, 100vw)' : 360, height: '100%' }}>
             <RecommendChat
               user={user}
+              isOwner={isOwner}
               onClose={() => setChatOpen(false)}
               onHighlight={setHighlightedIds}
               onClearHighlight={() => setHighlightedIds(null)}

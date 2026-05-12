@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { signIn } from '@/lib/auth'
-import { AVAILABLE_MODELS, DEFAULT_MODEL, type AvailableModelId } from '@/lib/llm'
+import FeedbackPanel from './FeedbackPanel'
 import type { User } from '@supabase/supabase-js'
 
 interface ChatMessage {
@@ -11,11 +11,12 @@ interface ChatMessage {
 }
 
 type Stage = 'understanding' | 'searching' | 'writing' | null
-
-const MODEL_STORAGE_KEY = 'fm-recommend-model'
+type ModelStatus = 'checking' | 'ok' | 'error'
+type Vote = 'up' | 'down'
 
 interface Props {
   user: User | null
+  isOwner?: boolean
   onClose: () => void
   onHighlight: (ids: string[]) => void
   onClearHighlight: () => void
@@ -28,12 +29,16 @@ const STAGE_TEXT: Record<Exclude<Stage, null>, string> = {
   writing: '正在生成推荐…',
 }
 
-export default function RecommendChat({ user, onClose, onHighlight, onClearHighlight, highlightCount }: Props) {
+export default function RecommendChat({ user, isOwner, onClose, onHighlight, onClearHighlight, highlightCount }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [stage, setStage] = useState<Stage>(null)
-  const [model, setModel] = useState<AvailableModelId>(DEFAULT_MODEL)
+  const [modelStatus, setModelStatus] = useState<ModelStatus>('checking')
+  const [votes, setVotes] = useState<Record<number, Vote>>({})
+  const [feedbackIdx, setFeedbackIdx] = useState<number | null>(null)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackPanelOpen, setFeedbackPanelOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -42,16 +47,11 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
   }, [user])
 
   useEffect(() => {
-    const saved = localStorage.getItem(MODEL_STORAGE_KEY)
-    if (saved && AVAILABLE_MODELS.some(m => m.id === saved)) {
-      setModel(saved as AvailableModelId)
-    }
+    fetch('/api/llm-health')
+      .then(r => r.json())
+      .then(d => setModelStatus(d.ok ? 'ok' : 'error'))
+      .catch(() => setModelStatus('error'))
   }, [])
-
-  function changeModel(id: AvailableModelId) {
-    setModel(id)
-    localStorage.setItem(MODEL_STORAGE_KEY, id)
-  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -72,7 +72,7 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
       const res = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages, model }),
+        body: JSON.stringify({ messages: nextMessages }),
       })
 
       if (!res.ok || !res.body) throw new Error('request failed')
@@ -132,14 +132,43 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
       setLoading(false)
       setStage(null)
     }
-  }, [input, loading, messages, onHighlight, model])
+  }, [input, loading, messages, onHighlight])
 
   function handleClear() {
     setMessages([])
+    setVotes({})
+    setFeedbackIdx(null)
+    setFeedbackText('')
     onClearHighlight()
   }
 
+  function handleVote(idx: number, vote: Vote) {
+    if (votes[idx]) return
+    setVotes(prev => ({ ...prev, [idx]: vote }))
+    if (vote === 'down') {
+      setFeedbackIdx(idx)
+      setFeedbackText('')
+    } else {
+      setFeedbackIdx(null)
+    }
+  }
+
+  async function submitFeedback(idx: number) {
+    const payload = { msg_content: messages[idx]?.content ?? null, feedback_text: feedbackText || null }
+    setFeedbackIdx(null)
+    setFeedbackText('')
+    await fetch('/api/llm-feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
+
+  const canSend = modelStatus === 'ok' && !loading && !!input.trim() && !!user
+
   return (
+    <>
+    {feedbackPanelOpen && <FeedbackPanel onClose={() => setFeedbackPanelOpen(false)} />}
     <div
       style={{
         display: 'flex',
@@ -168,6 +197,22 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
         <span style={{ fontFamily: 'var(--font-geist-sans)', fontWeight: 600, fontSize: 13.5, color: 'var(--fm-ink)' }}>
           AI 推荐
         </span>
+
+        {/* Model status indicator */}
+        <span
+          title={
+            modelStatus === 'checking' ? '检测模型中…' :
+            modelStatus === 'ok' ? '模型在线' : '模型离线'
+          }
+          style={{
+            width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+            background:
+              modelStatus === 'checking' ? 'var(--fm-ink-4)' :
+              modelStatus === 'ok' ? 'var(--fm-green)' : '#dc2626',
+            ...(modelStatus === 'checking' ? { animation: 'fm-pulse 1.4s ease-in-out infinite' } : {}),
+          }}
+        />
+
         {highlightCount !== null && (
           <button
             onClick={onClearHighlight}
@@ -190,30 +235,19 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
           </button>
         )}
         <div style={{ flex: 1 }} />
-        <select
-          value={model}
-          onChange={e => changeModel(e.target.value as AvailableModelId)}
-          disabled={loading}
-          title={AVAILABLE_MODELS.find(m => m.id === model)?.label}
-          style={{
-            height: 24, padding: '0 6px', borderRadius: 99,
-            background: 'var(--fm-cream)',
-            border: '1px solid var(--fm-line)',
-            fontSize: 11, fontFamily: 'var(--font-geist-mono)',
-            color: 'var(--fm-ink-2)',
-            cursor: loading ? 'default' : 'pointer',
-            opacity: loading ? 0.4 : 1,
-            outline: 'none',
-            appearance: 'none',
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            paddingRight: 8,
-          }}
-        >
-          {AVAILABLE_MODELS.map(m => (
-            <option key={m.id} value={m.id}>{m.short}</option>
-          ))}
-        </select>
+        {isOwner && (
+          <button
+            onClick={() => setFeedbackPanelOpen(true)}
+            style={{
+              fontSize: 11.5, fontFamily: 'var(--font-geist-sans)',
+              color: 'var(--fm-ink-3)', background: 'transparent',
+              border: 'none', cursor: 'pointer',
+              padding: '2px 6px', borderRadius: 6,
+            }}
+          >
+            查看反馈
+          </button>
+        )}
         {messages.length > 0 && (
           <button
             onClick={handleClear}
@@ -285,7 +319,17 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
           </div>
         )}
 
-        {user && messages.length === 0 && (
+        {user && modelStatus === 'error' && messages.length === 0 && (
+          <div style={{ margin: 'auto', textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ fontSize: 13, color: '#dc2626', fontFamily: 'var(--font-geist-sans)', lineHeight: 1.7 }}>
+              模型离线，无法使用 AI 推荐
+              <br />
+              <span style={{ fontSize: 12, color: 'var(--fm-ink-4)' }}>请检查 Ollama 服务是否运行</span>
+            </div>
+          </div>
+        )}
+
+        {user && modelStatus !== 'error' && messages.length === 0 && (
           <div style={{ margin: 'auto', textAlign: 'center', padding: '24px 0' }}>
             <div style={{ fontSize: 13, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-sans)', lineHeight: 1.7 }}>
               用一句话描述你想吃什么
@@ -302,16 +346,10 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
           const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1
           const showStage = isLastAssistant && msg.content === '' && stage !== null
           const showThinking = isLastAssistant && msg.content === '' && loading && stage === null
+          const isCompletedAssistant = msg.role === 'assistant' && msg.content !== '' && !(isLastAssistant && loading)
+
           return (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                alignItems: 'flex-start',
-                gap: 8,
-              }}
-            >
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 4 }}>
               <div
                 style={{
                   maxWidth: '88%',
@@ -333,6 +371,92 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
                   msg.content
                 )}
               </div>
+
+              {/* Feedback row — only for completed assistant messages */}
+              {isCompletedAssistant && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <VoteButton
+                      type="up"
+                      active={votes[i] === 'up'}
+                      disabled={!!votes[i]}
+                      onClick={() => handleVote(i, 'up')}
+                    />
+                    <VoteButton
+                      type="down"
+                      active={votes[i] === 'down'}
+                      disabled={!!votes[i]}
+                      onClick={() => handleVote(i, 'down')}
+                    />
+                  </div>
+
+                  {/* Inline feedback dialog */}
+                  {feedbackIdx === i && (
+                    <div
+                      style={{
+                        background: 'var(--fm-cream)',
+                        border: '1px solid var(--fm-line-2)',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                        width: 220,
+                      }}
+                    >
+                      <p style={{ margin: 0, fontSize: 12, color: 'var(--fm-ink-3)', fontFamily: 'var(--font-geist-sans)' }}>
+                        哪里不满意？（可选）
+                      </p>
+                      <textarea
+                        value={feedbackText}
+                        onChange={e => setFeedbackText(e.target.value)}
+                        placeholder="说说看…"
+                        autoFocus
+                        style={{
+                          width: '100%',
+                          minHeight: 64,
+                          resize: 'none',
+                          borderRadius: 7,
+                          border: '1px solid var(--fm-line-2)',
+                          background: 'var(--fm-paper)',
+                          padding: '7px 9px',
+                          fontSize: 12.5,
+                          fontFamily: 'var(--font-geist-sans)',
+                          color: 'var(--fm-ink)',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                        onFocus={e => (e.currentTarget.style.borderColor = 'var(--fm-ink)')}
+                        onBlur={e => (e.currentTarget.style.borderColor = 'var(--fm-line-2)')}
+                      />
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => { setFeedbackIdx(null); setFeedbackText('') }}
+                          style={{
+                            padding: '5px 10px', borderRadius: 7, fontSize: 12,
+                            border: '1px solid var(--fm-line-2)', background: 'transparent',
+                            color: 'var(--fm-ink-3)', cursor: 'pointer',
+                            fontFamily: 'var(--font-geist-sans)',
+                          }}
+                        >
+                          跳过
+                        </button>
+                        <button
+                          onClick={() => submitFeedback(i)}
+                          style={{
+                            padding: '5px 10px', borderRadius: 7, fontSize: 12,
+                            border: 'none', background: 'var(--fm-ink)',
+                            color: 'var(--fm-paper)', cursor: 'pointer',
+                            fontFamily: 'var(--font-geist-sans)', fontWeight: 500,
+                          }}
+                        >
+                          提交
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}
@@ -355,8 +479,8 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-          placeholder={user ? '想吃什么？' : '登录后可用'}
-          disabled={loading || !user}
+          placeholder={!user ? '登录后可用' : modelStatus === 'error' ? '模型离线' : '想吃什么？'}
+          disabled={loading || !user || modelStatus === 'error'}
           style={{
             flex: 1,
             height: 36,
@@ -372,11 +496,11 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
         />
         <button
           onClick={send}
-          disabled={loading || !input.trim() || !user}
+          disabled={!canSend}
           style={{
             width: 36, height: 36, borderRadius: 10, border: 'none',
-            background: loading || !input.trim() || !user ? 'var(--fm-line)' : 'var(--fm-orange)',
-            color: '#fff', cursor: loading || !input.trim() || !user ? 'default' : 'pointer',
+            background: canSend ? 'var(--fm-orange)' : 'var(--fm-line)',
+            color: '#fff', cursor: canSend ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'background 0.12s',
           }}
@@ -388,6 +512,47 @@ export default function RecommendChat({ user, onClose, onHighlight, onClearHighl
         </button>
       </div>
     </div>
+    </>
+  )
+}
+
+function VoteButton({ type, active, disabled, onClick }: {
+  type: 'up' | 'down'
+  active: boolean
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={type === 'up' ? '有用' : '没用'}
+      style={{
+        width: 26, height: 26,
+        borderRadius: 7,
+        border: `1px solid ${active ? (type === 'up' ? 'var(--fm-green)' : '#dc2626') : 'var(--fm-line-2)'}`,
+        background: active ? (type === 'up' ? '#eaf4ee' : '#fee2e2') : 'transparent',
+        color: active ? (type === 'up' ? 'var(--fm-green)' : '#dc2626') : 'var(--fm-ink-4)',
+        cursor: disabled ? 'default' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: disabled && !active ? 0.4 : 1,
+        transition: 'all 0.1s',
+        padding: 0,
+        flexShrink: 0,
+      }}
+    >
+      {type === 'up' ? (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+          <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
+          <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
+        </svg>
+      )}
+    </button>
   )
 }
 
