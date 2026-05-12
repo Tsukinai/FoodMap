@@ -11,6 +11,51 @@ export type ResolvedLocation =
       planning_area: string | null
     }
 
+// Chinese place name → English geocode query for OneMap.
+// OneMap doesn't index Chinese names, so we translate before calling it.
+const CN_TO_EN: Record<string, string> = {
+  '乌节路': 'Orchard Road',
+  '牛车水': 'Chinatown',
+  '芽笼': 'Geylang',
+  '大巴窑': 'Toa Payoh',
+  '碧山': 'Bishan',
+  '义顺': 'Yishun',
+  '淡滨尼': 'Tampines',
+  '兀兰': 'Woodlands',
+  '后港': 'Hougang',
+  '盛港': 'Sengkang',
+  '榜鹅': 'Punggol',
+  '白沙': 'Pasir Ris',
+  '勿洛': 'Bedok',
+  '武吉班让': 'Bukit Panjang',
+  '蔡厝港': 'Choa Chu Kang',
+  '裕廊东': 'Jurong East',
+  '裕廊西': 'Jurong West',
+  '裕廊': 'Jurong East',
+  '金文泰': 'Clementi',
+  '武吉知马': 'Bukit Timah',
+  '荷兰村': 'Holland Village',
+  '丹戎巴葛': 'Tanjong Pagar',
+  '女皇镇': 'Queenstown',
+  '纽顿': 'Newton',
+  '东陵': 'Tanglin',
+  '诺维娜': 'Novena',
+  '滨海湾': 'Marina Bay',
+  '武吉美拉': 'Bukit Merah',
+  '小印度': 'Little India',
+  '武吉士': 'Bugis',
+  '实龙岗': 'Serangoon',
+  '宏茂桥': 'Ang Mo Kio',
+  '巴耶利峇': 'Paya Lebar',
+  '三巴旺': 'Sembawang',
+  '万礼': 'Mandai',
+  '先驱': 'Pioneer',
+  '文礼': 'Boon Lay',
+  '港湾': 'HarbourFront',
+  '圣淘沙': 'Sentosa',
+  '樟宜': 'Changi',
+}
+
 // Singapore region keyword → planning areas. Used to expand "中部"/"east" etc.
 // Keep planning area names in OneMap's exact casing so intersection with
 // availableAreas (also OneMap-sourced) succeeds.
@@ -100,8 +145,9 @@ export async function resolveLocation(
   }
 
   // 3. OneMap geocode → point + radius. Reverse-look the planning area for
-  // display context.
-  const geo = await searchOneMap(trimmed)
+  // display context. Translate Chinese names first — OneMap doesn't index them.
+  const geocodeQuery = CN_TO_EN[trimmed] ?? trimmed
+  const geo = await searchOneMap(geocodeQuery)
   if (geo.length > 0) {
     const lat = parseFloat(geo[0].LATITUDE)
     const lng = parseFloat(geo[0].LONGITUDE)

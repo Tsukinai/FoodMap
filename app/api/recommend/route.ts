@@ -83,18 +83,18 @@ function buildSystemPrompt(tags: Tag[]): string {
 
 【评分】夯/顶级/人上人/NPC/拉完了
 
-【location_query】只要用户提到任何地名（街区、大区、方位、planning area、地标、商场、MRT 站），原样填进 location_query。不要分类、不要选 planning area、不要翻译——代码会统一解析。
-- "中部"/"东边"/"西部" → location_query: "中部" / "东边" / "西部"
-- "Clementi"/"Tampines"/"Orchard" → location_query: 原样
-- "Vivocity"/"ION Orchard"/"Marina Bay Sands" → location_query: 原样
-- "Bugis"/"Holland Village"/"Tiong Bahru"/"牛车水" → location_query: 原样
-没提地名就留空。
+【location_query】只要用户提到任何地名，统一翻译成标准英文再填入 location_query。规则：
+- 中文地名 → 标准英文：乌节路→"Orchard Road"，牛车水→"Chinatown"，芽笼→"Geylang"，荷兰村→"Holland Village"，以此类推
+- 缩写/俚语 → 还原：tjpg→"Tanjong Pagar"，amk→"Ang Mo Kio"，tb→"Tiong Bahru"，hv→"Holland Village"，以此类推
+- 方位大区（中部/东边/北区/west/east…）→ 原样保留，不翻译
+- 没提地名 → 留空
 
-【radius_km】仅当 location_query 是具体地点（地标/MRT/街区）时填。"附近"=2，"周围"=3。说大区或 planning area 时不必填。
+【radius_km】仅当 location_query 是具体地点（地标/MRT/街区）时填。"附近"=2，"周围"=3。方位大区不填。
 
 【常见示例】
 - "想吃牛排，中部吧" → cuisine_tags: ["西餐"], dish_tags: ["牛排"], location_query: "中部"
-- "Clementi 附近想吃中餐" → cuisine_tags: ["中餐"], location_query: "Clementi"
+- "乌节路附近吃中餐" → cuisine_tags: ["中餐"], location_query: "Orchard Road", radius_km: 2
+- "tjpg 有什么好吃的" → location_query: "Tanjong Pagar"
 - "便宜的辣的，还没去过" → taste_tags: ["特辣"], max_cost: 25, status: "want"
 - "Vivocity 附近随便吃点" → location_query: "Vivocity", radius_km: 2`
 }
