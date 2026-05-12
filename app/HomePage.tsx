@@ -10,6 +10,8 @@ import RestaurantList from '@/components/RestaurantList'
 import GuestbookPanel from '@/components/guestbook/GuestbookPanel'
 import DisclaimerModal from '@/components/DisclaimerModal'
 import RecommendChat from '@/components/recommend/RecommendChat'
+import PinRequestModal from '@/components/pin-requests/PinRequestModal'
+import PinRequestsPanel from '@/components/pin-requests/PinRequestsPanel'
 
 const MapContainer = dynamic(() => import('@/components/map/MapContainer'), {
   ssr: false,
@@ -50,6 +52,9 @@ export default function HomePage() {
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'guestbook'>('map')
   const [chatOpen, setChatOpen] = useState(false)
   const [highlightedIds, setHighlightedIds] = useState<string[] | null>(null)
+  const [pinRequestOpen, setPinRequestOpen] = useState(false)
+  const [requestsOpen, setRequestsOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
 
   const supabase = createClient()
 
@@ -146,12 +151,37 @@ export default function HomePage() {
     return Array.from(seen).sort()
   }, [allRestaurants])
 
+  const fetchPendingCount = useCallback(async () => {
+    if (!isOwner) return
+    try {
+      const res = await fetch('/api/pin-requests')
+      const data = await res.json()
+      setPendingCount(Array.isArray(data) ? data.length : 0)
+    } catch {
+      setPendingCount(0)
+    }
+  }, [isOwner])
+
   useEffect(() => { fetchRestaurants() }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { fetchTags() }, [fetchTags])
+  useEffect(() => { fetchPendingCount() }, [fetchPendingCount])
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ background: 'var(--fm-cream)' }}>
       <DisclaimerModal />
+      {pinRequestOpen && (
+        <PinRequestModal
+          onClose={() => setPinRequestOpen(false)}
+          onSubmitted={() => setPinRequestOpen(false)}
+        />
+      )}
+      {requestsOpen && (
+        <PinRequestsPanel
+          allTags={allTags}
+          onClose={() => setRequestsOpen(false)}
+          onChanged={() => { fetchPendingCount(); fetchRestaurants() }}
+        />
+      )}
 
       {/* ── Header ── */}
       <header
@@ -330,6 +360,55 @@ export default function HomePage() {
               </>
             )}
           </>
+        )}
+
+        {/* Non-owner: recommend a restaurant */}
+        {!isOwner && user && (
+          <button
+            onClick={() => setPinRequestOpen(true)}
+            style={{
+              height: 32,
+              paddingLeft: 12,
+              paddingRight: 12,
+              borderRadius: 8,
+              background: 'transparent',
+              border: '1px solid var(--fm-line)',
+              color: 'var(--fm-ink-2)',
+              fontSize: 12.5,
+              fontFamily: 'var(--font-geist-sans)',
+              fontWeight: 500,
+              cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            推荐餐馆
+          </button>
+        )}
+
+        {/* Owner: pending requests */}
+        {isOwner && (
+          <button
+            onClick={() => setRequestsOpen(true)}
+            style={{
+              position: 'relative',
+              height: 32,
+              paddingLeft: 12,
+              paddingRight: 12,
+              borderRadius: 8,
+              background: pendingCount > 0 ? '#fdf0e6' : 'transparent',
+              border: `1px solid ${pendingCount > 0 ? '#c8883a' : 'var(--fm-line)'}`,
+              color: pendingCount > 0 ? '#c8883a' : 'var(--fm-ink-3)',
+              fontSize: 12.5,
+              fontFamily: 'var(--font-geist-sans)',
+              fontWeight: pendingCount > 0 ? 600 : 400,
+              cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            待审{pendingCount > 0 ? ` (${pendingCount})` : ''}
+          </button>
         )}
 
         {/* Chat toggle — far right, mirrors hamburger on left */}

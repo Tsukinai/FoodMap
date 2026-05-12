@@ -64,6 +64,23 @@ export interface FilterPayload {
   areas: string[]
 }
 
+export interface PinRequest {
+  id: string
+  user_id: string
+  author_name: string
+  author_avatar: string | null
+  name: string
+  address: string
+  postal_code: string | null
+  lng: number
+  lat: number
+  cuisine_tag_ids: string[]
+  scene_tag_ids: string[]
+  notes: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+}
+
 export interface OneMapResult {
   SEARCHVAL: string
   BLK_NO: string
