@@ -357,8 +357,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Rank: rating × 3 (dominant) + number of tag-type hits + proximity
-        // score (only when near_location), tie-break by created_at desc. Without
-        // this, slice(0, 8) was returning whatever order Supabase emitted.
+        // score (only when near_location), tie-break by created_at desc.
         const RATING_SCORE: Record<string, number> = {
           '夯': 5, '顶级': 4, '人上人': 3, 'NPC': 2, '拉完了': 1, '未评分': 0,
         }
@@ -386,7 +385,7 @@ export async function POST(req: NextRequest) {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         })
 
-        const matched = results.slice(0, 8)
+        const matched = results
         stageBMs = Date.now() - stageBStart
 
         send({
@@ -492,7 +491,7 @@ ${restaurantCtx}`
               ],
               think: false,
               stream: true,
-              options: { num_predict: 600, temperature: 0.6 },
+              options: { temperature: 0.6 },
             }),
           })
 
